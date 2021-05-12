@@ -43,8 +43,7 @@ int main(int argc, char *argv[])
 
         manufact_name manufactName = flasher->getSerialPort()->getManufactName();
 
-        flasher->detectSoftwareType();
-        bool isBootloader = flasher->isBootloaderDetected();
+        bool isBootloader = flasher->getSerialPort()->isBootloaderDetected();
 
         if(!isBootloader) {
             flasher->sendFlashCommandToApp();

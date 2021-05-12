@@ -26,6 +26,8 @@
 #include "mainwindow.h"
 #include "settingsdialog.h"
 
+#define SERIAL_TIMEOUT      100u //ms
+
 class SettingsDialog;
 
 QT_BEGIN_NAMESPACE
@@ -42,6 +44,8 @@ public:
     void closeConn();
     bool isOpen();
     bool tryOpenPort();
+    bool detectBoard(void);
+    bool isBootloaderDetected(void);
     manufact_name getManufactName() {return m_port.manufactNameEnum;}
 
 private:
@@ -49,6 +53,7 @@ private:
     bool m_isOpen;
     SettingsDialog::Settings m_port;
     QTimer m_timer;
+    bool m_isBootlaoder;
 };
 
 

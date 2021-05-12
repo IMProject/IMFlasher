@@ -19,13 +19,19 @@
 
 #include "serial_port.h"
 #include <QDebug>
+#include <QSerialPortInfo>
 
 #define TIMER_TIMEOUT       10000u //ms
+
+#define SOFTWARE_TYPE_CMD           "software_type"
+#define IM_BOOTLOADER_STR           "IMBootloader"
+#define IM_APPLICATION_STR          "IMApplication"
 
 SerialPort::SerialPort()
     : m_settings(new SettingsDialog),
       m_isOpen(false),
-      m_timer(new QTimer)
+      m_timer(new QTimer),
+      m_isBootlaoder(false)
 {
     m_timer.setSingleShot(true);
     m_timer.setInterval(TIMER_TIMEOUT);
@@ -80,29 +86,78 @@ bool SerialPort::tryOpenPort()
     m_settings->updateSettings();
     m_port = m_settings->settings();
 
-    switch(m_port.manufactNameEnum)
-    {
-     case(MANUFACT_NAME_IMBOOT):
-     case(MANUFACT_NAME_IMAPP):
-     case(MANUFACT_NAME_MICROSOFT):
+    const auto infos = QSerialPortInfo::availablePorts();
+    for (const QSerialPortInfo &info : infos) {
+        //We are supporting multiple different manufacturer names
         success = true;
-        break;
 
-    default:
-        success = false;
-        break;
-    }
+        if(MANUFACT_IMBOOT == info.manufacturer()) {
 
-    if(success) {
-        openConn();
-    } else {
+            m_port.manufactNameEnum = MANUFACT_NAME_IMBOOT;
+            m_port.name = info.portName();
 
-        if(m_isOpen) {
-            close();
+        } else if(MANUFACT_IMAPP == info.manufacturer()) {
+
+            m_port.manufactNameEnum = MANUFACT_NAME_IMAPP;
+            m_port.name = info.portName();
+
+        } else if(MANUFACT_MICROSOFT == info.manufacturer()) {
+            m_port.manufactNameEnum = MANUFACT_NAME_MICROSOFT;
+            m_port.name = info.portName();
+        } else {
+            success = false;
         }
 
-        m_isOpen = false;
+        if(success) {
+            openConn();
+
+            // For Microsoft, we can't be sure if we are connected to the proper board so we need to check this.
+            bool isBoardDetected = detectBoard();
+            if(isBoardDetected) {
+                // we are connected to proper board, exit for loop
+                break;
+            } else {
+                if(m_isOpen) {
+                    close();
+                }
+            }
+
+        } else {
+
+            if(m_isOpen) {
+                close();
+            }
+
+            m_isOpen = false;
+        }
     }
 
     return success;
 }
+
+bool SerialPort::detectBoard(void)
+{
+    bool isBoardDetected = false;
+    write(SOFTWARE_TYPE_CMD, sizeof(SOFTWARE_TYPE_CMD));
+    waitForReadyRead(SERIAL_TIMEOUT);
+    QString softwareType = readAll();
+
+    if(softwareType == IM_APPLICATION_STR) {
+        // We are in application
+        m_isBootlaoder = false;
+        isBoardDetected = true;
+
+    } else if (softwareType == IM_BOOTLOADER_STR) {
+        m_isBootlaoder = true;
+        isBoardDetected = true;
+
+    }
+
+    return isBoardDetected;
+}
+
+bool SerialPort::isBootloaderDetected(void)
+{
+    return m_isBootlaoder;
+}
+

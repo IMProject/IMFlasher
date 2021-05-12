@@ -162,29 +162,6 @@ void SettingsDialog::updateSettings()
 
 
     m_currentSettings.manufacturer = "";
-    const auto infos = QSerialPortInfo::availablePorts();
-    for (const QSerialPortInfo &info : infos) {
-        //We are supporting multiple different manufacturer name
-        m_currentSettings.manufacturer = info.manufacturer();
-
-        if(MANUFACT_IMBOOT == m_currentSettings.manufacturer) {
-
-            m_currentSettings.manufactNameEnum = MANUFACT_NAME_IMBOOT;
-            m_currentSettings.name = info.portName();
-            break;
-
-        } else if(MANUFACT_IMAPP == m_currentSettings.manufacturer) {
-
-            m_currentSettings.manufactNameEnum = MANUFACT_NAME_IMAPP;
-            m_currentSettings.name = info.portName();
-            break;
-
-        } else if(MANUFACT_MICROSOFT  == m_currentSettings.manufacturer) {
-            m_currentSettings.manufactNameEnum = MANUFACT_NAME_MICROSOFT;
-            m_currentSettings.name = info.portName();
-            break;
-        }
-    }
 
     if (m_ui->baudRateBox->currentIndex() == 4) {
         m_currentSettings.baudRate = m_ui->baudRateBox->currentText().toInt();

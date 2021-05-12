@@ -32,7 +32,6 @@ typedef enum flahser_states
     FLASHER_PLUG_USB,
     FLASHER_CONNECTECTED,
     FLASHER_DISCONNECTECTED,
-    FLASHER_DETECT_SW_TYPE,
     FLASHER_BOARD_ID,
     FLASHER_GET_BOARD_ID_KEY,
     FLASHER_BOARD_CHECK_REGISTRATION,       //!< Check if file exist and size of key
@@ -86,9 +85,7 @@ public:
     void setFilePath(QString filePath);
     void setFlashWriteAddress(QByteArray setFlashWriteAddress);
     void sendFlashCommandToApp(void); //enter in bootlaoder
-    void detectSoftwareType(void);
     void getVersion(void);
-    bool isBootloaderDetected(void);
 
 signals:
     void updateProgress(qint64 dataPosition, qint64 firmwareSize);
@@ -123,7 +120,6 @@ private:
     QJsonObject m_jsonObject;
     QString m_filePath;
     SocketClient* m_socketClient = nullptr;
-    bool m_isBootlaoder;
 
     QByteArray m_flashWriteAddress;
 };

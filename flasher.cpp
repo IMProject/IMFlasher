@@ -23,16 +23,12 @@
 
 #define PACKET_SIZE         256u
 #define SIGNATURE_SIZE      64u
-#define SERIAL_TIMEOUT      100u //ms
 #define VERIFY_FLASHER_CMD          "IMFlasher_Verify"
-#define CHECK_SINGATURE_CMD   "check_signature"
-#define ERASE_CMD             "erase"
+#define CHECK_SINGATURE_CMD         "check_signature"
+#define ERASE_CMD                   "erase"
 #define GET_BOARD_ID_CMD            "board_id"
-#define SOFTWARE_TYPE_CMD           "software_type"
 #define VERSION_CMD                 "version"
 #define FLASH_FW_CMD                "flash_fw"
-#define IM_BOOTLOADER_STR           "IMBootloader"
-#define IM_APPLICATION_STR          "IMApplication"
 #define NOT_SECURED_MAGIC_STRING    "NOT_SECURED_MAGIC_STRING_1234567" //32 bytes magic string
 
 #define CRC32_SIZE              4
@@ -62,7 +58,6 @@ Flasher::Flasher() :
         m_boardKey(),
         m_jsonObject(),
         m_socketClient(new SocketClient),
-        m_isBootlaoder(false),
         m_flashWriteAddress()
 {
     m_keysFile->setFileName(KEY_FILE_NAME);
@@ -147,7 +142,15 @@ void Flasher::loopHandler()
 
             emit connectedSerialPort();
             if(m_serialPort->isOpen()) {
-                m_state = FLASHER_DETECT_SW_TYPE;
+                getVersion();
+
+                if(m_serialPort->isBootloaderDetected()) {
+                    emit isBootloader(true);
+                    m_state = FLASHER_BOARD_ID;
+                } else {
+                    emit isBootloader(false);
+                    m_state = FLASHER_IDLE;
+                }
             }
             break;
 
@@ -158,17 +161,11 @@ void Flasher::loopHandler()
             }
             break;
 
-        case(FLASHER_DETECT_SW_TYPE):
-
-            detectSoftwareType();
-            break;
-
         case(FLASHER_BOARD_ID):
 
             success = collectBoardId();
             if(success) {
                 emit textInBrowser("Board ID: " + m_boardId);
-                emit isBootloader(true);
                 m_state = FLASHER_BOARD_CHECK_REGISTRATION;
             } else {
                 emit textInBrowser("Board ID Error. Unplug your board, press disconnect/connect, and plug your board again.");
@@ -557,29 +554,6 @@ void Flasher::sendFlashCommandToApp(void)
     QThread::msleep(400); //wait for restart
 }
 
-void Flasher::detectSoftwareType(void)
-{
-    m_serialPort->write(SOFTWARE_TYPE_CMD, sizeof(SOFTWARE_TYPE_CMD));
-    m_serialPort->waitForReadyRead(SERIAL_TIMEOUT);
-    QString softwareType = m_serialPort->readAll();
-
-    if(softwareType == IM_APPLICATION_STR) {
-        // We are in application
-        m_state = FLASHER_IDLE;
-        m_isBootlaoder = false;
-        emit isBootloader(false);
-        getVersion();
-
-    } else if (softwareType == IM_BOOTLOADER_STR) {
-        m_state = FLASHER_BOARD_ID;
-        m_isBootlaoder = true;
-        getVersion();
-    } else {
-        emit textInBrowser("Check if the proper board is connected. Try unplug the USB and plug it again!");
-        m_state = FLASHER_DISCONNECTECTED;
-    }
-}
-
 void Flasher::getVersion(void)
 {
     m_serialPort->write(VERSION_CMD, sizeof(VERSION_CMD));
@@ -587,9 +561,4 @@ void Flasher::getVersion(void)
     QString gitVersion = m_serialPort->readAll();
     emit textInBrowser(gitVersion);
     //qInfo() << gitVersion;
-}
-
-bool Flasher::isBootloaderDetected(void)
-{
-    return m_isBootlaoder;
 }
