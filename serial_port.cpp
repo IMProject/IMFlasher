@@ -118,17 +118,14 @@ bool SerialPort::tryOpenPort()
                 break;
             } else {
                 if(m_isOpen) {
-                    close();
+                    closeConn();
                 }
             }
 
         } else {
-
             if(m_isOpen) {
-                close();
+                closeConn();
             }
-
-            m_isOpen = false;
         }
     }
 
