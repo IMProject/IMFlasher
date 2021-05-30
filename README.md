@@ -15,4 +15,11 @@ For development Qt Creator 5.14.x is needed. The last supported version is 5.14.
 
 ![image](https://user-images.githubusercontent.com/10188706/118359153-73e9a500-b582-11eb-90b4-0a5fc73e628d.png)
 
+### Console
+
+Command for flashing
+
+`./IMFlasher_Linux_v1.0.0.AppImage flash "IMLedBlink/build/stm32h7xx/IMLedBlink_stm32h7xx_signed.bin"`
+
+![IMFlasher_console](https://user-images.githubusercontent.com/10188706/120115162-bc0fe680-c182-11eb-81ce-543e9fd1175b.gif)
 
