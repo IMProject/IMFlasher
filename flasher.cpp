@@ -96,7 +96,7 @@ void Flasher::init()
     connect(this, &Flasher::runLoop, worker, &Worker::doWork);
     connect(worker, &Worker::flasherLoop, this, &Flasher::loopHandler);
     workerThread.start();
-    runLoop();
+    emit runLoop();
 }
 
 void Flasher::deinit()
@@ -245,7 +245,7 @@ void Flasher::loopHandler()
     }
 
     workerThread.msleep(SLEEP_TIME);
-    runLoop();
+    emit runLoop();
 }
 
 void  Flasher::startFlashingSlot()
@@ -551,7 +551,7 @@ void Flasher::deserialize32(uint8_t* buf, uint32_t* value)
     *value |= (uint32_t)(buf[3] << 0u);
 }
 
-void Flasher::setFilePath(QString filePath)
+void Flasher::setFilePath(const QString& filePath)
 {
     m_filePath = filePath;
 }
@@ -575,4 +575,8 @@ void Flasher::getVersion(void)
     QString gitVersion = m_serialPort->readAll();
     emit textInBrowser(gitVersion);
     //qInfo() << gitVersion;
+}
+
+QThread& Flasher::getWorkerThread() {
+    return workerThread;
 }

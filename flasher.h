@@ -97,10 +97,11 @@ public:
     void closeSerialPort();
     void actionOpenFirmwareFile();
     void deserialize32(uint8_t* buf, uint32_t* value);
-    void setFilePath(QString filePath);
+    void setFilePath(const QString& filePath);
     void setFlashWriteAddress(QByteArray setFlashWriteAddress);
     void sendFlashCommandToApp(void); //enter in bootlaoder
     void getVersion(void);
+    QThread& getWorkerThread();
 
 signals:
     void updateProgress(qint64 dataPosition, qint64 firmwareSize);
