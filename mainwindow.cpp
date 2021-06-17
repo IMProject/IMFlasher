@@ -184,9 +184,13 @@ Flasher* MainWindow::getFlasherPtr()
 
 void MainWindow::on_selectFirmware_clicked()
 {
+    m_flasher->getWorkerThread().quit();
+
     QString filePath = QFileDialog::getOpenFileName(this,
             tr("Flight control binary"), "",
             tr("Binary (*.bin);;All Files (*)"));
+
+    m_flasher->init();
 
     m_flasher->setFilePath(filePath);
     m_flasher->actionOpenFirmwareFile();
