@@ -108,16 +108,16 @@ bool SerialPort::tryOpenPort()
 
         if(MANUFACT_IMBOOT == info.manufacturer()) {
 
-            m_port.manufactNameEnum = MANUFACT_NAME_IMBOOT;
+            m_port.manufactNameEnum = manufacturerName::IMBOOT;
             m_port.name = info.portName();
 
         } else if(MANUFACT_IMAPP == info.manufacturer()) {
 
-            m_port.manufactNameEnum = MANUFACT_NAME_IMAPP;
+            m_port.manufactNameEnum = manufacturerName::IMAPP;
             m_port.name = info.portName();
 
         } else if(MANUFACT_MICROSOFT == info.manufacturer()) {
-            m_port.manufactNameEnum = MANUFACT_NAME_MICROSOFT;
+            m_port.manufactNameEnum = manufacturerName::MICROSOFT;
             m_port.name = info.portName();
         } else {
             success = false;
