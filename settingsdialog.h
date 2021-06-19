@@ -44,11 +44,11 @@
 
 QT_BEGIN_NAMESPACE
 
-typedef enum manufact_name {
-    MANUFACT_NAME_IMBOOT = 0,
-    MANUFACT_NAME_IMAPP,
-    MANUFACT_NAME_MICROSOFT
-} manufact_name_t;
+enum class manufacturerName {
+    IMBOOT = 0,
+    IMAPP,
+    MICROSOFT
+};
 
 namespace Ui {
 class SettingsDialog;
@@ -76,7 +76,7 @@ public:
         QSerialPort::FlowControl flowControl;
         QString stringFlowControl;
         QString manufacturer;
-        manufact_name manufactNameEnum;
+        manufacturerName manufactNameEnum;
         bool isProperDevice;
     };
 

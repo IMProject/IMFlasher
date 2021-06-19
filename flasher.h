@@ -88,11 +88,11 @@ public:
     bool getBoardKeyFromServer();
     bool sendKey();
     bool startErase();
-    void startFlash();
+    bool startFlash();
     bool crcCheck(const uint8_t* data, uint32_t size);
     bool checkAck();
     void startRegistrationProcedure();
-    void openFirmwareFile(QString filePath);
+    bool openFirmwareFile(const QString& filePath);
     void openSerialPort();
     void closeSerialPort();
     void actionOpenFirmwareFile();

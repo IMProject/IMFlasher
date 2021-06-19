@@ -37,7 +37,6 @@
 #include "crc32.h"
 
 #define PACKET_SIZE         256u
-#define SIGNATURE_SIZE      64u
 #define VERIFY_FLASHER_CMD          "IMFlasher_Verify"
 #define CHECK_SINGATURE_CMD         "check_signature"
 #define ERASE_CMD                   "erase"
@@ -54,6 +53,9 @@
 #define SLEEP_TIME              100u                // Take it easy on CPU
 #define KEY_FILE_NAME           "keys.json"
 
+
+static const qint64 signatureSize = 64;
+static const int eraseTimeout = 5000;               // Erase timeout -> 5 sec
 
 void Worker::doWork()
 {
@@ -262,11 +264,7 @@ bool Flasher::collectBoardId()
 {
     bool success = false;
 
-    if(m_serialPort->isOpen()) {
-        success = true;
-    }
-
-    if(success) {
+    if (m_serialPort->isOpen()) {
         m_serialPort->write(GET_BOARD_ID_CMD, sizeof(GET_BOARD_ID_CMD));
         m_serialPort->waitForReadyRead(SERIAL_TIMEOUT + 200);
         QByteArray data = m_serialPort->readAll();
@@ -284,9 +282,9 @@ bool Flasher::collectBoardId()
             qInfo() << "BOARD ID";
             m_boardId = boardId.toHex();
             qInfo() << m_boardId;
+            success = true;
         } else {
             qInfo() << "Board id error";
-            success = false;
         }
 
     }
@@ -300,21 +298,22 @@ bool Flasher::getBoardKey()
 
     //Skip security
     QByteArray magic_string = NOT_SECURED_MAGIC_STRING;
-    if(m_boardId != magic_string.toHex()) {
+    if (m_boardId != magic_string.toHex()) {
 
         QJsonValue boardKey = m_jsonObject.value(m_boardId);
         m_boardKey = boardKey.toString();
 
-        if(m_boardKey.size() == KEY_SIZE_STRING) {
+        if (m_boardKey.size() == KEY_SIZE_STRING) {
+
             success = true;
+
+        } else {
+            qInfo() << "Board key error";
         }
+
     } else {
         m_isSecureBoot = false;
         success = true;
-    }
-
-    if(!success) {
-        qInfo() << "Board key error";
     }
 
     return success;
@@ -370,42 +369,33 @@ bool Flasher::startErase()
 {
     bool success = false;
 
-    if(m_serialPort->isOpen()) {
-        success = true;
-    }
+    if (m_serialPort->isOpen()) {
 
-    if(success) {
-        success = sendKey();
-    }
-
-    if(success) {
-        //Send flash verifying string
-        qInfo() << "ERASE";
-        m_serialPort->write(ERASE_CMD, sizeof(ERASE_CMD));
-        m_serialPort->waitForReadyRead(5000); //for erase timeout is 5 sec
-        success = checkAck();
+        if (this->sendKey()) {
+            // Send flash verifying string
+            qInfo() << "ERASE";
+            m_serialPort->write(ERASE_CMD, sizeof(ERASE_CMD));
+            m_serialPort->waitForReadyRead(eraseTimeout);
+            success = checkAck();
+        }
     }
 
     return success;
 }
 
-void Flasher::startFlash()
+bool Flasher::startFlash()
 {
     bool success = false;
-
-    if(m_serialPort->isOpen()) {
-        success = true;
-    }
-
-    qint64 dataPosition = 0u;
+    qint64 dataPosition = 0;
     QByteArray byteArray = m_fileFirmware->readAll();
+
     m_fileFirmware->close();
+    m_firmwareSize = m_fileFirmware->size() - signatureSize;
 
-    m_firmwareSize = m_fileFirmware->size() - SIGNATURE_SIZE;
     char *ptrDataSignature = byteArray.data();
-    char *ptrDataFirmware = byteArray.data() + SIGNATURE_SIZE;
+    char *ptrDataFirmware = byteArray.data() + signatureSize;
 
-    if(success) {
+    if (m_serialPort->isOpen()) {
         success = sendKey();
     }
 
@@ -420,7 +410,7 @@ void Flasher::startFlash()
     if(success) {
         //Send signature
         qInfo() << "SEND SIGNATURE";
-        m_serialPort->write(ptrDataSignature, SIGNATURE_SIZE);
+        m_serialPort->write(ptrDataSignature, signatureSize);
         m_serialPort->waitForReadyRead(SERIAL_TIMEOUT);
         success = checkAck();
     }
@@ -448,7 +438,7 @@ void Flasher::startFlash()
         emit flashingStatusSignal("ERASING");
         qInfo() << "ERASE";
         m_serialPort->write(ERASE_CMD, sizeof(ERASE_CMD));
-        m_serialPort->waitForReadyRead(5000); //for erase timeout is 5 sec
+        m_serialPort->waitForReadyRead(eraseTimeout);
         success = checkAck();
     }
 
@@ -493,19 +483,19 @@ void Flasher::startFlash()
             }
         }
     }
+
+    return success;
 }
 
 bool Flasher::crcCheck(const uint8_t* data, uint32_t size)
 {
-    bool success;
     QByteArray crcData;
     uint32_t crc = CalculateCRC32(data, size, false, false);
     crcData.setNum(crc);
     m_serialPort->write(crcData);
     m_serialPort->waitForReadyRead(SERIAL_TIMEOUT);
-    success = checkAck();
 
-    return success;
+    return checkAck();
 }
 
 bool Flasher::checkAck()
@@ -518,12 +508,13 @@ bool Flasher::checkAck()
             qInfo() << "ACK";
             success = true;
         } else if (0 == QString::compare("NOK", data, Qt::CaseInsensitive)) {
-            qInfo() << "NO ACK";
+            qInfo() << "NOK ACK";
         } else {
             qInfo() << "ERROR or TIMEOUT";
         }
 
     } else {
+        qInfo() << "NO ACK";
         success = false;
     }
 
@@ -535,12 +526,11 @@ void Flasher::startRegistrationProcedure()
     m_state = FLASHER_GET_BOARD_ID_KEY;
 }
 
-void Flasher::openFirmwareFile(QString filePath)
+bool Flasher::openFirmwareFile(const QString& filePath)
 {
     m_fileFirmware->setFileName(filePath);
-    if (!m_fileFirmware->open(QIODevice::ReadOnly)) {
-      return;
-    }
+
+    return m_fileFirmware->open(QIODevice::ReadOnly);
 }
 
 void Flasher::deserialize32(uint8_t* buf, uint32_t* value)

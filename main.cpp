@@ -47,50 +47,54 @@ int main(int argc, char *argv[])
 
     app.setWindowIcon(QIcon(":/images/capman.png"));
 
-    //Console solution
-    if(argc>=2)
-    {
+    // Run console solution
+    if (argc >= 2) {
         QString actionString = argv[1];
         QString filePath = argv[2];
 
         //This is a blocking solution only for the console. No init needed.
         flasher->getSerialPort()->openConnBlocking();
 
-        manufact_name manufactName = flasher->getSerialPort()->getManufactName();
+        manufacturerName manufactName = flasher->getSerialPort()->getManufactName();
 
-        bool isBootloader = flasher->getSerialPort()->isBootloaderDetected();
-
-        if(!isBootloader) {
+        if (!(flasher->getSerialPort()->isBootloaderDetected())) {
             flasher->sendFlashCommandToApp();
             qInfo() << "Unplug USB run this app again and plug USB! ";
 
-        } else if((manufactName == MANUFACT_NAME_IMBOOT) || (manufactName == MANUFACT_NAME_MICROSOFT)) {
+        } else if ((manufactName == manufacturerName::IMBOOT) || (manufactName == manufacturerName::MICROSOFT)) {
 
-            bool success = true;
+            if (flasher->collectBoardId()) {
 
-            if(success) {
-                success = flasher->collectBoardId();
-            }
+                if (flasher->getBoardKey()) {
 
-            if(success) {
-                success = flasher->getBoardKey();
-            }
+                    if (0 == QString::compare("erase", actionString, Qt::CaseInsensitive)) {
 
-            if(success ) {
+                        if (flasher->startErase()) {
+                            qInfo() << "Erase success";
 
-                if(actionString == "erase")
-                {
-                    flasher->startErase();
+                        } else {
+                            qInfo() << "Erase error";
+                        }
 
-                } else if(actionString == "flash"){
+                    } else if (0 == QString::compare("flash", actionString, Qt::CaseInsensitive)) {
 
-                    flasher->openFirmwareFile(filePath);
-                    flasher->startFlash();
+                        if (flasher->openFirmwareFile(filePath)) {
 
-                } else {
-                     qInfo() << "Select flash or erase";
+                            if (flasher->startFlash()) {
+                                qInfo() << "Flash success";
+
+                            } else {
+                                qInfo() << "Flash error";
+                            }
+
+                        } else {
+                            qInfo() << "Open firmware file error";
+                        }
+
+                    } else {
+                         qInfo() << "Select flash or erase";
+                    }
                 }
-
             }
 
         } else {

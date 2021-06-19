@@ -61,7 +61,7 @@ public:
     bool tryOpenPort();
     bool detectBoard(void);
     bool isBootloaderDetected(void);
-    manufact_name getManufactName() {return m_port.manufactNameEnum;}
+    manufacturerName getManufactName() {return m_port.manufactNameEnum;}
 
 private:
     SettingsDialog *m_settings = nullptr;
