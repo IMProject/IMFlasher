@@ -146,8 +146,8 @@ void MainWindow::connectUsbToPcUi()
 
 void MainWindow::about()
 {
-    QMessageBox::about(this, tr("About IMFlahser"),
-                       tr("The <b>IMFlahser</b> v1.0.0"));
+    QMessageBox::about(this, tr("About IMFlasher"),
+                       tr("The <b>IMFlasher</b> v1.0.1"));
 }
 
 void MainWindow::updateProgressUi(qint64 sentSize, qint64 firmwareSize)
