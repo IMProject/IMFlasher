@@ -81,7 +81,9 @@ int main(int argc, char *argv[])
 
                         if (flasher->openFirmwareFile(filePath)) {
 
-                            if (flasher->startFlash()) {
+                            std::tuple<bool, QString, QString> flashingInfo = flasher->startFlash();
+
+                            if (std::get<0>(flashingInfo)) {
                                 qInfo() << "Flash success";
 
                             } else {

@@ -85,7 +85,7 @@ public:
     bool getBoardKeyFromServer();
     bool sendKey();
     bool startErase();
-    bool startFlash();
+    std::tuple<bool, QString, QString> startFlash();
     bool crcCheck(const uint8_t* data, uint32_t size);
     bool checkAck();
     bool openFirmwareFile(const QString& filePath);
@@ -100,6 +100,7 @@ public:
 
 signals:
     void updateProgress(const qint64& dataPosition, const qint64& firmwareSize);
+    void clearProgress();
     void connectUsbToPc();
     void connectedSerialPort();
     void disconnectedSerialPort();
@@ -109,12 +110,13 @@ signals:
     void textInBrowser(const QString& boardId);
     void isBootloader(const bool& bootloader);
     void readyToFlashId();
-    void flashingStatusSignal(const QString& status);
 
 public slots:
     void loopHandler();
 
 private:
+    void showInfoMsgAtTheEndOfFlashing(const QString& title, const QString& description);
+
     std::shared_ptr<SerialPort> m_serialPort;
     std::unique_ptr<QFile> m_fileFirmware;
     std::shared_ptr<QFile> m_keysFile;

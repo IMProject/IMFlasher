@@ -37,6 +37,7 @@
 #include "crc32.h"
 #include <QJsonDocument>
 #include <QDebug>
+#include <QMessageBox>
 
 const QByteArray Flasher::NOT_SECURED_MAGIC_STRING = "NOT_SECURED_MAGIC_STRING_1234567"; // 32 bytes magic string
 const QString Flasher::KEY_FILE_NAME = "keys.json";
@@ -223,9 +224,13 @@ void Flasher::loopHandler()
             break;
 
         case FlasherStates::FLASH:
-            this->startFlash();
+        {
+            std::tuple<bool, QString, QString> flashingInfo = this->startFlash();
+            this->showInfoMsgAtTheEndOfFlashing(std::get<1>(flashingInfo), std::get<2>(flashingInfo));
+            emit clearProgress();
             this->setState(FlasherStates::IDLE);
             break;
+        }
 
         default:
             break;
@@ -363,9 +368,11 @@ bool Flasher::startErase()
     return success;
 }
 
-bool Flasher::startFlash()
+std::tuple<bool, QString, QString> Flasher::startFlash()
 {
     bool success = false;
+    QString title = "Unknown";
+    QString description = "Unknown";
     qint64 dataPosition = 0;
     QByteArray byteArray = m_fileFirmware->readAll();
 
@@ -377,94 +384,125 @@ bool Flasher::startFlash()
 
     if (m_serialPort->isOpen()) {
         success = sendKey();
+
+    } else {
+        title = "Error";
+        description = "Serial port is not opened";
     }
 
-    if(success) {
-        //Send command for check signature
-        qInfo() << "SIGNATURE CMD";
+    if (success) {
+        qInfo() << "Check signature";
         m_serialPort->write(CHECK_SIGNATURE_CMD, sizeof(CHECK_SIGNATURE_CMD));
         m_serialPort->waitForReadyRead(SERIAL_TIMEOUT_IN_MS);
         success = checkAck();
+
+        if (!success) {
+            title = "Flashing process failed";
+            description = "Check signature problem";
+        }
     }
 
-    if(success) {
-        //Send signature
-        qInfo() << "SEND SIGNATURE";
+    if (success) {
+        qInfo() << "Send signature";
         m_serialPort->write(ptrDataSignature, SIGNATURE_SIZE);
         m_serialPort->waitForReadyRead(SERIAL_TIMEOUT_IN_MS);
         success = checkAck();
+
+        if (!success) {
+            title = "Flashing process failed";
+            description = "Send signature problem";
+        }
     }
 
-    if(success) {
-        //Send flash verifying string
-        qInfo() << "VERIFY_BOOTLOADER";
+    if (success) {
+        qInfo() << "Verify flasher";
         m_serialPort->write(VERIFY_FLASHER_CMD, sizeof(VERIFY_FLASHER_CMD));
         m_serialPort->waitForReadyRead(SERIAL_TIMEOUT_IN_MS);
         success = checkAck();
+
+        if (!success) {
+            title = "Flashing process failed";
+            description = "Verify flasher problem";
+        }
     }
 
-    if(success) {
-        //Send file size
+    if (success) {
         QByteArray sizeDataString;
         sizeDataString.setNum(m_firmwareSize);
-        qInfo() << "SIZE";
+        qInfo() << "Send file size";
         m_serialPort->write(sizeDataString);
         m_serialPort->waitForReadyRead(SERIAL_TIMEOUT_IN_MS);
         success = checkAck();
+
+        if (!success) {
+            title = "Flashing process failed";
+            description = "Send file size problem";
+        }
     }
 
-    if(success) {
-        //Send command for erasing
-        emit flashingStatusSignal("ERASING");
-        qInfo() << "ERASE";
+    if (success) {
+        qInfo() << "Erase";
         m_serialPort->write(ERASE_CMD, sizeof(ERASE_CMD));
         m_serialPort->waitForReadyRead(ERASE_TIMEOUT_IN_MS);
         success = checkAck();
+
+        if (!success) {
+            title = "Flashing process failed";
+            description = "Erasing problem";
+        }
     }
 
-    //Send file in packages
-    if(success) {
-        emit flashingStatusSignal("FLASHING");
+    // Send file in packages
+    if (success) {
         qint64 packetsNumber = (m_firmwareSize / PACKET_SIZE);
-        for( dataPosition = 0; dataPosition < packetsNumber; dataPosition++) {
+        for (dataPosition = 0; dataPosition < packetsNumber; ++dataPosition) {
             char* ptrDataPosition;
             ptrDataPosition = ptrDataFirmware + (dataPosition * PACKET_SIZE);
 
             m_serialPort->write(ptrDataPosition, PACKET_SIZE);
             m_serialPort->waitForReadyRead(SERIAL_TIMEOUT_IN_MS);
             emit updateProgress((dataPosition + 1u) * PACKET_SIZE, m_firmwareSize);
-
             success = checkAck();
-            if(!success) {
+
+            if (!success) {
+                title = "Flashing process failed";
+                description = "Problem with flashing";
                 break;
             }
-
         }
 
-        if(success) {
+        if (success) {
             qint64 restSize = m_firmwareSize % PACKET_SIZE;
 
-            if(restSize > 0u) {
+            if (restSize > 0) {
                 m_serialPort->write(ptrDataFirmware + (dataPosition * PACKET_SIZE), restSize);
                 m_serialPort->waitForReadyRead(SERIAL_TIMEOUT_IN_MS);
-                success = checkAck();
                 emit updateProgress(dataPosition * PACKET_SIZE + restSize, m_firmwareSize);
+                success = checkAck();
+
+                if (!success) {
+                    title = "Flashing process failed";
+                    description = "Problem with flashing";
+                }
             }
         }
 
-        if(success) {
-            //CRC
+        if (success) {
             qInfo() << "CRC";
-            crcCheck((const uint8_t*)ptrDataFirmware, m_firmwareSize);
-            if(success) {
-                emit flashingStatusSignal("DONE");
+            this->crcCheck((const uint8_t*) ptrDataFirmware, m_firmwareSize);
+
+            if (success) {
+                title = "Flashing process done";
+                description = "Successful flashing process";
+
             } else {
-                emit flashingStatusSignal("ERROR");
+                title = "Flashing process failed";
+                description = "CRC problem";
             }
         }
     }
 
-    return success;
+    return std::make_tuple(success, title, description);
 }
 
 bool Flasher::crcCheck(const uint8_t* data, uint32_t size)
@@ -545,4 +583,13 @@ void Flasher::getVersion(void)
 QThread& Flasher::getWorkerThread()
 {
     return workerThread;
+}
+
+void Flasher::showInfoMsgAtTheEndOfFlashing(const QString& title, const QString& description)
+{
+    QMessageBox msgBox;
+    msgBox.setText(title);
+    msgBox.setInformativeText(description);
+    msgBox.setStandardButtons(QMessageBox::Ok);
+    msgBox.exec();
 }
