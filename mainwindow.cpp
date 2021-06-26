@@ -65,6 +65,11 @@ MainWindow::MainWindow(std::shared_ptr<Flasher> flasher, QWidget *parent) :
         qInfo() << sentSize << "/" << firmwareSize << "B, " << progressPercentage <<"%";
     });
 
+    connect(m_flasher.get(), &Flasher::clearProgress, this, [&] (void) {
+        m_ui->progressBar->hide();
+        m_ui->progressBar->setValue(0);
+    });
+
     connect(m_flasher.get(), &Flasher::connectUsbToPc, this, [&] (void) { this->showStatusMessage(tr("Reconnect board to PC")); });
 
     connect(m_flasher.get(), &Flasher::connectedSerialPort, this, [&] (void) {
@@ -82,8 +87,6 @@ MainWindow::MainWindow(std::shared_ptr<Flasher> flasher, QWidget *parent) :
     connect(m_flasher.get(), &Flasher::isBootloader, this, &MainWindow::isBootloaderUi);
 
     connect(m_flasher.get(), &Flasher::readyToFlashId, this, [&] (void) { m_ui->loadFirmware->setEnabled(true); });
-
-    connect(m_flasher.get(), &Flasher::flashingStatusSignal, this, [&] (const auto& status) { this->showStatusMessage(tr("%1").arg(status)); });
 }
 
 void MainWindow::openSerialPortUi()
