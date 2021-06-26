@@ -35,10 +35,8 @@
 #include "socket.h"
 #include <QMessageAuthenticationCode>
 
-QByteArray shaKeyComm = "NDQ4N2Y1YjFhZTg3ZGI3MTA1MjlhYmM3";
-
-const QHostAddress serverAddress  = QHostAddress::LocalHost;
-quint16 port = 5322;
+const QByteArray SocketClient::SHA_KEY_COMM = "NDQ4N2Y1YjFhZTg3ZGI3MTA1MjlhYmM3";
+const QHostAddress SocketClient::SERVER_ADDRESS = QHostAddress::LocalHost;
 
 SocketClient::SocketClient() :
     m_tcpClient()
@@ -49,9 +47,9 @@ bool SocketClient::dataTransfer(QByteArray &inData, QByteArray &outData)
 {
     bool success = false;
     QMessageAuthenticationCode code(QCryptographicHash::Sha256);
-    code.setKey(shaKeyComm);
+    code.setKey(SHA_KEY_COMM);
 
-    m_tcpClient.connectToHost(serverAddress, port);
+    m_tcpClient.connectToHost(SERVER_ADDRESS, PORT);
     success = m_tcpClient.waitForReadyRead();
     if(success) {
         QByteArray token = m_tcpClient.readAll();

@@ -34,6 +34,7 @@
 
 #include "mainwindow.h"
 #include "flasher.h"
+#include "serial_port.h"
 
 #include <QApplication>
 #include <QThread>
@@ -42,8 +43,8 @@
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
-    MainWindow window;
-    Flasher* flasher = window.getFlasherPtr();
+    std::shared_ptr<Flasher> flasher = std::make_shared<Flasher>();
+    MainWindow window(flasher);
 
     app.setWindowIcon(QIcon(":/images/capman.png"));
 
@@ -55,13 +56,13 @@ int main(int argc, char *argv[])
         //This is a blocking solution only for the console. No init needed.
         flasher->getSerialPort()->openConnBlocking();
 
-        manufacturerName manufactName = flasher->getSerialPort()->getManufactName();
+        ManufacturerName manufactName = flasher->getSerialPort()->getManufactName();
 
         if (!(flasher->getSerialPort()->isBootloaderDetected())) {
             flasher->sendFlashCommandToApp();
             qInfo() << "Unplug USB run this app again and plug USB! ";
 
-        } else if ((manufactName == manufacturerName::IMBOOT) || (manufactName == manufacturerName::MICROSOFT)) {
+        } else if ((manufactName == ManufacturerName::IMBOOT) || (manufactName == ManufacturerName::MICROSOFT)) {
 
             if (flasher->collectBoardId()) {
 

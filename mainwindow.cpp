@@ -34,21 +34,15 @@
 
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
-#include "settingsdialog.h"
-#include "crc32.h"
+#include "flasher.h"
 
 #include <QMessageBox>
-#include <QLabel>
 #include <QFileDialog>
 
-#include <qmath.h>
-#include <QDebug>
-
-MainWindow::MainWindow(QWidget *parent) :
+MainWindow::MainWindow(std::shared_ptr<Flasher> flasher, QWidget *parent) :
     QMainWindow(parent),
-    m_ui(new Ui::MainWindow),
-    m_settings(new SettingsDialog()),
-    m_flasher(new Flasher),
+    m_ui(std::make_shared<Ui::MainWindow>()),
+    m_flasher(flasher),
     m_isBootloader(false)
 {
     m_ui->setupUi(this);
@@ -63,23 +57,33 @@ MainWindow::MainWindow(QWidget *parent) :
 
     m_ui->registerButton->setEnabled(true);
 
-    initActionsConnections();
+    this->initActionsConnections();
 
-    connect(m_flasher, &Flasher::updateProgress, this, &MainWindow::updateProgressUi);
-    connect(m_flasher, &Flasher::connectUsbToPc, this, &MainWindow::connectUsbToPcUi);
-    connect(m_flasher, &Flasher::connectedSerialPort, this, &MainWindow::connectedSerialPortUi);
-    connect(m_flasher, &Flasher::disconnectedSerialPort, this, &MainWindow::disconnectedSerialPortUi);
-    connect(m_flasher, &Flasher::textInBrowser, this, &MainWindow::appendTextInBrowser);
-    connect(m_flasher, &Flasher::isBootloader, this, &MainWindow::isBootloaderUi);
-    connect(m_flasher, &Flasher::readyToFlashId, this, &MainWindow::enableLoadButtonUi);
-    connect(m_flasher, &Flasher::flashingStatusSignal, this, &MainWindow::flashingStatusLabelUi);
-    connect(this, &MainWindow::startFlashingSignal, m_flasher, &Flasher::startFlashingSlot);
-}
+    connect(m_flasher.get(), &Flasher::updateProgress, this, [&] (const qint64& sentSize, const qint64& firmwareSize) {
+        int progressPercentage = (100 * sentSize) / firmwareSize;
+        m_ui->progressBar->setValue(progressPercentage);
+        qInfo() << sentSize << "/" << firmwareSize << "B, " << progressPercentage <<"%";
+    });
 
-MainWindow::~MainWindow()
-{
-    delete m_settings;
-    delete m_ui;
+    connect(m_flasher.get(), &Flasher::connectUsbToPc, this, [&] (void) { this->showStatusMessage(tr("Reconnect board to PC")); });
+
+    connect(m_flasher.get(), &Flasher::connectedSerialPort, this, [&] (void) {
+        this->showStatusMessage(tr("Connected"));
+        this->openSerialPortUi();
+    });
+
+    connect(m_flasher.get(), &Flasher::disconnectedSerialPort, this, [&] (void) {
+        this->showStatusMessage(tr("Disconnected"));
+        this->closeSerialPortUi();
+    });
+
+    connect(m_flasher.get(), &Flasher::textInBrowser, this, [&] (const auto& text) { m_ui->textBrowser->append(text); });
+
+    connect(m_flasher.get(), &Flasher::isBootloader, this, &MainWindow::isBootloaderUi);
+
+    connect(m_flasher.get(), &Flasher::readyToFlashId, this, [&] (void) { m_ui->loadFirmware->setEnabled(true); });
+
+    connect(m_flasher.get(), &Flasher::flashingStatusSignal, this, [&] (const auto& status) { this->showStatusMessage(tr("%1").arg(status)); });
 }
 
 void MainWindow::openSerialPortUi()
@@ -93,28 +97,10 @@ void MainWindow::closeSerialPortUi()
 {
     m_ui->actionConnect->setEnabled(true);
     m_ui->actionDisconnect->setEnabled(false);
-    //m_ui->actionConfigure->setEnabled(true);
     m_flasher->closeSerialPort();
 }
 
-void MainWindow::connectedSerialPortUi()
-{
-    showStatusMessage(tr("Connected"));
-    openSerialPortUi();
-}
-
-void MainWindow::disconnectedSerialPortUi()
-{
-    showStatusMessage(tr("Disconnected"));
-    closeSerialPortUi();
-}
-
-void MainWindow::appendTextInBrowser(QString text)
-{
-    m_ui->textBrowser->append (text);
-}
-
-void MainWindow::isBootloaderUi(bool bootloader)
+void MainWindow::isBootloaderUi(const bool& bootloader)
 {
     m_isBootloader = bootloader;
 
@@ -124,62 +110,30 @@ void MainWindow::isBootloaderUi(bool bootloader)
         m_ui->selectFirmware->setEnabled(true);
         m_ui->registerButton->setEnabled(false);
     } else {
-        m_ui->loadFirmware->setText("Enter in bootlaoder");
+        m_ui->loadFirmware->setText("Enter bootloader");
         m_ui->loadFirmware->setEnabled(true);
         m_ui->selectFirmware->setEnabled(false);
-    }
-}
-void MainWindow::enableLoadButtonUi()
-{
-    m_ui->loadFirmware->setEnabled(true);
-}
-
-void MainWindow::flashingStatusLabelUi(QString status)
-{
-    showStatusMessage(tr("%1").arg(status));
-}
-
-void MainWindow::connectUsbToPcUi()
-{
-    showStatusMessage(tr("Reconnect board to PC"));
-}
-
-void MainWindow::about()
-{
-    QMessageBox::about(this, tr("About IMFlasher"),
-                       tr("The <b>IMFlasher</b> v1.0.1"));
-}
-
-void MainWindow::updateProgressUi(qint64 sentSize, qint64 firmwareSize)
-{
-    uint8_t progressPercentage = (100 * sentSize) / firmwareSize; //%
-    m_ui->progressBar->setValue(progressPercentage);
-    qInfo() << sentSize << "/" << firmwareSize << "B, " << progressPercentage <<"%";
-}
-
-void MainWindow::handleError(QSerialPort::SerialPortError error)
-{
-    if (error == QSerialPort::ResourceError) {
-        closeSerialPortUi();
     }
 }
 
 void MainWindow::initActionsConnections()
 {
     connect(m_ui->actionConnect, &QAction::triggered, this, &MainWindow::openSerialPortUi);
+
     connect(m_ui->actionDisconnect, &QAction::triggered, this, &MainWindow::closeSerialPortUi);
-    connect(m_ui->actionQuit, &QAction::triggered, this, &MainWindow::close);
-    connect(m_ui->actionAbout, &QAction::triggered, this, &MainWindow::about);
+
+    connect(m_ui->actionQuit, &QAction::triggered, this, [&] (void) { this->close(); });
+
+    connect(m_ui->actionAbout, &QAction::triggered, this, [&] (void) {
+        QMessageBox::about(this,
+                           tr("About IMFlasher"),
+                           tr("The <b>IMFlasher</b> v1.0.1"));
+    });
 }
 
 void MainWindow::showStatusMessage(const QString &message)
 {
     m_ui->statusLabel->setText(message);
-}
-
-Flasher* MainWindow::getFlasherPtr()
-{
-    return m_flasher;
 }
 
 void MainWindow::on_selectFirmware_clicked()
@@ -193,7 +147,7 @@ void MainWindow::on_selectFirmware_clicked()
     m_flasher->init();
 
     m_flasher->setFilePath(filePath);
-    m_flasher->actionOpenFirmwareFile();
+    m_flasher->setState(FlasherStates::OPEN_FILE);
 }
 
 void MainWindow::on_loadFirmware_clicked()
@@ -201,7 +155,8 @@ void MainWindow::on_loadFirmware_clicked()
     if(m_isBootloader) {
         m_ui->loadFirmware->setEnabled(false);
         m_ui->progressBar->show();
-        emit startFlashingSignal();
+        m_flasher->setState(FlasherStates::FLASH);
+
     } else {
         m_flasher->sendFlashCommandToApp();
         closeSerialPortUi();
@@ -211,5 +166,5 @@ void MainWindow::on_loadFirmware_clicked()
 
 void MainWindow::on_registerButton_clicked()
 {
-    m_flasher->startRegistrationProcedure();
+    m_flasher->setState(FlasherStates::GET_BOARD_ID_KEY);
 }

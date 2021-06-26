@@ -36,20 +36,21 @@
 #include <QDebug>
 #include <QSerialPortInfo>
 
-#define TIMER_TIMEOUT       10000u //ms
-
-#define SOFTWARE_TYPE_CMD           "software_type"
-#define IM_BOOTLOADER_STR           "IMBootloader"
-#define IM_APPLICATION_STR          "IMApplication"
+const char SerialPort::SOFTWARE_TYPE_CMD[14] = "software_type";
+const QString SerialPort::MANUFACT_IMBOOT = "IMBOOT";
+const QString SerialPort::MANUFACT_IMAPP = "IMAPP";
+const QString SerialPort::MANUFACT_MICROSOFT = "Microsoft";
+const QString SerialPort::SW_TYPE_IMBOOT = "IMBootloader";
+const QString SerialPort::SW_TYPE_IMAPP = "IMApplication";
 
 SerialPort::SerialPort()
-    : m_settings(new SettingsDialog),
+    : m_settings(std::make_unique<SettingsDialog>()),
       m_isOpen(false),
       m_timer(new QTimer),
       m_isBootlaoder(false)
 {
     m_timer.setSingleShot(true);
-    m_timer.setInterval(TIMER_TIMEOUT);
+    m_timer.setInterval(TIMER_TIMEOUT_IN_MS);
     m_timer.start();
 }
 
@@ -89,7 +90,7 @@ void SerialPort::closeConn()
     }
 }
 
-bool SerialPort::isOpen()
+bool SerialPort::isOpen() const
 {
     return m_isOpen;
 }
@@ -108,16 +109,16 @@ bool SerialPort::tryOpenPort()
 
         if(MANUFACT_IMBOOT == info.manufacturer()) {
 
-            m_port.manufactNameEnum = manufacturerName::IMBOOT;
+            m_port.manufactNameEnum = ManufacturerName::IMBOOT;
             m_port.name = info.portName();
 
         } else if(MANUFACT_IMAPP == info.manufacturer()) {
 
-            m_port.manufactNameEnum = manufacturerName::IMAPP;
+            m_port.manufactNameEnum = ManufacturerName::IMAPP;
             m_port.name = info.portName();
 
         } else if(MANUFACT_MICROSOFT == info.manufacturer()) {
-            m_port.manufactNameEnum = manufacturerName::MICROSOFT;
+            m_port.manufactNameEnum = ManufacturerName::MICROSOFT;
             m_port.name = info.portName();
         } else {
             success = false;
@@ -147,29 +148,35 @@ bool SerialPort::tryOpenPort()
     return success;
 }
 
-bool SerialPort::detectBoard(void)
+bool SerialPort::detectBoard()
 {
-    bool isBoardDetected = false;
+    bool isBoardDetected;
     write(SOFTWARE_TYPE_CMD, sizeof(SOFTWARE_TYPE_CMD));
-    waitForReadyRead(SERIAL_TIMEOUT);
+    waitForReadyRead(SERIAL_TIMEOUT_IN_MS);
     QString softwareType = readAll();
 
-    if(softwareType == IM_APPLICATION_STR) {
+    if (softwareType == SW_TYPE_IMAPP) {
         // We are in application
         m_isBootlaoder = false;
         isBoardDetected = true;
 
-    } else if (softwareType == IM_BOOTLOADER_STR) {
+    } else if (softwareType == SW_TYPE_IMBOOT) {
         m_isBootlaoder = true;
         isBoardDetected = true;
 
+    } else {
+        isBoardDetected = false;
     }
 
     return isBoardDetected;
 }
 
-bool SerialPort::isBootloaderDetected(void)
+bool SerialPort::isBootloaderDetected() const
 {
     return m_isBootlaoder;
 }
 
+ManufacturerName SerialPort::getManufactName() const
+{
+    return m_port.manufactNameEnum;
+}
