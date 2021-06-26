@@ -38,25 +38,21 @@
 #include <QDialog>
 #include <QSerialPort>
 
-#define MANUFACT_IMBOOT             "IMBOOT"
-#define MANUFACT_IMAPP              "IMAPP"
-#define MANUFACT_MICROSOFT          "Microsoft"
-
 QT_BEGIN_NAMESPACE
-
-enum class manufacturerName {
-    IMBOOT = 0,
-    IMAPP,
-    MICROSOFT
-};
 
 namespace Ui {
 class SettingsDialog;
 }
 
-class QIntValidator;
-
 QT_END_NAMESPACE
+
+enum class ManufacturerName {
+    IMBOOT = 0,
+    IMAPP,
+    MICROSOFT
+};
+
+class QIntValidator;
 
 class SettingsDialog : public QDialog
 {
@@ -76,12 +72,11 @@ public:
         QSerialPort::FlowControl flowControl;
         QString stringFlowControl;
         QString manufacturer;
-        manufacturerName manufactNameEnum;
+        ManufacturerName manufactNameEnum;
         bool isProperDevice;
     };
 
     explicit SettingsDialog(QWidget *parent = nullptr);
-    ~SettingsDialog();
 
     Settings settings() const;
     void updateSettings();
@@ -97,9 +92,10 @@ private:
     void fillPortsInfo();
 
 private:
-    Ui::SettingsDialog *m_ui = nullptr;
+    std::shared_ptr<Ui::SettingsDialog> m_ui;
     Settings m_currentSettings;
-    QIntValidator *m_intValidator = nullptr;
+    std::shared_ptr<QIntValidator> m_intValidator;
+    static const char* BLANK_STRING;
 };
 
 #endif // SETTINGSDIALOG_H

@@ -33,29 +33,21 @@
  ****************************************************************************/
 
 #include "flasher.h"
-#include <QDebug>
+#include "serial_port.h"
 #include "crc32.h"
+#include <QJsonDocument>
+#include <QDebug>
 
-#define PACKET_SIZE         256u
-#define VERIFY_FLASHER_CMD          "IMFlasher_Verify"
-#define CHECK_SINGATURE_CMD         "check_signature"
-#define ERASE_CMD                   "erase"
-#define GET_BOARD_ID_CMD            "board_id"
-#define VERSION_CMD                 "version"
-#define FLASH_FW_CMD                "flash_fw"
-#define NOT_SECURED_MAGIC_STRING    "NOT_SECURED_MAGIC_STRING_1234567" //32 bytes magic string
+const QByteArray Flasher::NOT_SECURED_MAGIC_STRING = "NOT_SECURED_MAGIC_STRING_1234567"; // 32 bytes magic string
+const QString Flasher::KEY_FILE_NAME = "keys.json";
 
-#define CRC32_SIZE              4
-#define BOARD_ID_SIZE           32
-#define BOARD_ID_SIZE_STRING    (BOARD_ID_SIZE * 2) // String use 2 bytes for character
-#define KEY_SIZE                32
-#define KEY_SIZE_STRING         (KEY_SIZE * 2)      // String use 2 bytes for character
-#define SLEEP_TIME              100u                // Take it easy on CPU
-#define KEY_FILE_NAME           "keys.json"
-
-
-static const qint64 signatureSize = 64;
-static const int eraseTimeout = 5000;               // Erase timeout -> 5 sec
+// Commands
+const char Flasher::VERIFY_FLASHER_CMD[17] = "IMFlasher_Verify";
+const char Flasher::ERASE_CMD[6] = "erase";
+const char Flasher::VERSION_CMD[8] = "version";
+const char Flasher::BOARD_ID_CMD[9] = "board_id";
+const char Flasher::FLASH_FW_CMD[9] = "flash_fw";
+const char Flasher::CHECK_SIGNATURE_CMD[16] = "check_signature";
 
 void Worker::doWork()
 {
@@ -63,19 +55,18 @@ void Worker::doWork()
 }
 
 Flasher::Flasher() :
-        m_serialPort(new SerialPort),
-        m_fileFirmware(new QFile),
-        m_keysFile(new QFile),
-        m_state(FLASHER_TRY_CONNECT),
+        m_serialPort(std::make_shared<SerialPort>()),
+        m_fileFirmware(std::make_unique<QFile>()),
+        m_keysFile(std::make_shared<QFile>()),
+        m_socketClient(std::make_unique<SocketClient>()),
+        m_state(FlasherStates::TRY_CONNECT),
         m_firmwareSize(0),
         m_tryOpen(false),
         m_isPortOpen(false),
         m_isSecureBoot(true),
         m_boardId(),
         m_boardKey(),
-        m_jsonObject(),
-        m_socketClient(new SocketClient),
-        m_flashWriteAddress()
+        m_jsonObject()
 {
     m_keysFile->setFileName(KEY_FILE_NAME);
     m_keysFile->open(QIODevice::ReadWrite);
@@ -108,18 +99,14 @@ void Flasher::deinit()
 
 void Flasher::openSerialPort()
 {
-    m_state = FLASHER_PLUG_USB;
+    this->setState(FlasherStates::PLUG_USB);
     m_tryOpen = true;
 }
+
 void Flasher::closeSerialPort()
 {
-    m_state = FLASHER_DISCONNECTECTED;
+    this->setState(FlasherStates::DISCONNECTED);
     m_tryOpen = false;
-}
-
-void Flasher::actionOpenFirmwareFile()
-{
-    m_state = FLASHER_OPEN_FILE;
 }
 
 void Flasher::loopHandler()
@@ -127,35 +114,35 @@ void Flasher::loopHandler()
     bool success;
     bool manufacturer;
 
-    switch(m_state)
+    switch (m_state)
     {
 
-        case(FLASHER_IDLE):
+        case FlasherStates::IDLE:
             if(m_fileFirmware->isOpen() && m_serialPort->isOpen()) {
                 emit readyToFlashId();
             }
             break;
 
-        case(FLASHER_TRY_CONNECT):
+        case FlasherStates::TRY_CONNECT:
             if(m_tryOpen) {
                 manufacturer = m_serialPort->tryOpenPort();
 
                 if(!manufacturer) {
-                    m_state = FLASHER_PLUG_USB;
+                    this->setState(FlasherStates::PLUG_USB);
                 }
             }
 
             break;
 
-        case(FLASHER_PLUG_USB):
+        case FlasherStates::PLUG_USB:
             emit connectUsbToPc();
             m_serialPort->tryOpenPort();
             if(m_serialPort->isOpen()) {
-                m_state = FLASHER_CONNECTECTED;
+                this->setState(FlasherStates::CONNECTED);
             }
             break;
 
-        case(FLASHER_CONNECTECTED):
+        case FlasherStates::CONNECTED:
 
             emit connectedSerialPort();
             if(m_serialPort->isOpen()) {
@@ -163,46 +150,46 @@ void Flasher::loopHandler()
 
                 if(m_serialPort->isBootloaderDetected()) {
                     emit isBootloader(true);
-                    m_state = FLASHER_BOARD_ID;
+                    this->setState(FlasherStates::BOARD_ID);
                 } else {
                     emit isBootloader(false);
-                    m_state = FLASHER_IDLE;
+                    this->setState(FlasherStates::IDLE);
                 }
             }
             break;
 
-        case(FLASHER_DISCONNECTECTED):
+        case FlasherStates::DISCONNECTED:
             m_serialPort->closeConn();
             if(!(m_serialPort->isOpen())) {
                 emit disconnectedSerialPort();
             }
             break;
 
-        case(FLASHER_BOARD_ID):
+        case FlasherStates::BOARD_ID:
 
             success = collectBoardId();
             if(success) {
                 emit textInBrowser("Board ID: " + m_boardId);
-                m_state = FLASHER_BOARD_CHECK_REGISTRATION;
+                this->setState(FlasherStates::BOARD_CHECK_REGISTRATION);
             } else {
                 emit textInBrowser("Board ID Error. Unplug your board, press disconnect/connect, and plug your board again.");
-                m_state = FLASHER_TRY_CONNECT;
+                this->setState(FlasherStates::TRY_CONNECT);
             }
 
-        break;
+            break;
 
-        case(FLASHER_BOARD_CHECK_REGISTRATION):
+        case FlasherStates::BOARD_CHECK_REGISTRATION:
             success = getBoardKey();
             if(success) {
                 emit textInBrowser("Board verified!");
             } else {
                 emit textInBrowser("Board is not registered! Press the register button");
             }
-            m_state = FLASHER_IDLE;
+            this->setState(FlasherStates::IDLE);
 
-        break;
+            break;
 
-        case(FLASHER_GET_BOARD_ID_KEY):
+        case FlasherStates::GET_BOARD_ID_KEY:
             if(m_boardId.size() != BOARD_ID_SIZE_STRING) {
                 emit textInBrowser("First connect board to get board id!");
 
@@ -218,11 +205,11 @@ void Flasher::loopHandler()
                     saveBoardKeyToFile();
                 }
             }
-            m_state = FLASHER_IDLE;
 
+            this->setState(FlasherStates::IDLE);
             break;
 
-        case(FLASHER_OPEN_FILE):
+        case FlasherStates::OPEN_FILE:
             if(m_filePath.size() > 0) { //check if file path exist
                 openFirmwareFile(m_filePath);
                 if(m_fileFirmware->isOpen()) {
@@ -231,31 +218,24 @@ void Flasher::loopHandler()
                     emit textInBrowser("Board ID: " + m_boardId);
                 }
             }
-            m_state = FLASHER_IDLE;
+
+            this->setState(FlasherStates::IDLE);
             break;
 
-        case(FLASHER_FLASH):
-            startFlash();
-            m_state = FLASHER_IDLE;
-            break;
-
-        case(FLASHER_EXIT):
+        case FlasherStates::FLASH:
+            this->startFlash();
+            this->setState(FlasherStates::IDLE);
             break;
 
         default:
             break;
     }
 
-    workerThread.msleep(SLEEP_TIME);
+    workerThread.msleep(THREAD_SLEEP_TIME_IN_MS);
     emit runLoop();
 }
 
-void  Flasher::startFlashingSlot()
-{
-    m_state = FLASHER_FLASH;
-}
-
-SerialPort* Flasher::getSerialPort()
+std::shared_ptr<SerialPort> Flasher::getSerialPort() const
 {
     return m_serialPort;
 }
@@ -265,8 +245,8 @@ bool Flasher::collectBoardId()
     bool success = false;
 
     if (m_serialPort->isOpen()) {
-        m_serialPort->write(GET_BOARD_ID_CMD, sizeof(GET_BOARD_ID_CMD));
-        m_serialPort->waitForReadyRead(SERIAL_TIMEOUT + 200);
+        m_serialPort->write(BOARD_ID_CMD, sizeof(BOARD_ID_CMD));
+        m_serialPort->waitForReadyRead(COLLECT_BOARD_ID_SERIAL_TIMEOUT_IN_MS);
         QByteArray data = m_serialPort->readAll();
         QByteArray boardId;
         QByteArray dataCrc;
@@ -276,7 +256,7 @@ bool Flasher::collectBoardId()
         dataCrc = data.right(CRC32_SIZE);
         deserialize32((uint8_t*)dataCrc.data(), &crc);
 
-        uint32_t calcCrc = CalculateCRC32((uint8_t*)boardId.data(), BOARD_ID_SIZE, false, false);
+        uint32_t calcCrc = CalculateCRC32((uint8_t*)boardId.data(), static_cast<uint32_t>(BOARD_ID_SIZE), false, false);
 
         if((boardId.size() == BOARD_ID_SIZE) && (calcCrc == crc)) {
             qInfo() << "BOARD ID";
@@ -321,7 +301,7 @@ bool Flasher::getBoardKey()
 
 void Flasher::saveBoardKeyToFile()
 {
-    QTextStream streamConfigFile(m_keysFile);
+    QTextStream streamConfigFile(m_keysFile.get());
     m_keysFile->open(QIODevice::ReadWrite);
 
     QJsonDocument jsonData;
@@ -356,7 +336,7 @@ bool Flasher::sendKey()
         QByteArray boardKeyData = QByteArray::fromHex(m_boardKey.toUtf8());
         m_serialPort->write(boardKeyData, boardKeyData.size());
 
-        m_serialPort->waitForReadyRead(SERIAL_TIMEOUT);
+        m_serialPort->waitForReadyRead(SERIAL_TIMEOUT_IN_MS);
         success = checkAck();
     } else {
         success = true;
@@ -375,7 +355,7 @@ bool Flasher::startErase()
             // Send flash verifying string
             qInfo() << "ERASE";
             m_serialPort->write(ERASE_CMD, sizeof(ERASE_CMD));
-            m_serialPort->waitForReadyRead(eraseTimeout);
+            m_serialPort->waitForReadyRead(ERASE_TIMEOUT_IN_MS);
             success = checkAck();
         }
     }
@@ -390,10 +370,10 @@ bool Flasher::startFlash()
     QByteArray byteArray = m_fileFirmware->readAll();
 
     m_fileFirmware->close();
-    m_firmwareSize = m_fileFirmware->size() - signatureSize;
+    m_firmwareSize = m_fileFirmware->size() - SIGNATURE_SIZE;
 
     char *ptrDataSignature = byteArray.data();
-    char *ptrDataFirmware = byteArray.data() + signatureSize;
+    char *ptrDataFirmware = byteArray.data() + SIGNATURE_SIZE;
 
     if (m_serialPort->isOpen()) {
         success = sendKey();
@@ -402,16 +382,16 @@ bool Flasher::startFlash()
     if(success) {
         //Send command for check signature
         qInfo() << "SIGNATURE CMD";
-        m_serialPort->write(CHECK_SINGATURE_CMD, sizeof(CHECK_SINGATURE_CMD));
-        m_serialPort->waitForReadyRead(SERIAL_TIMEOUT);
+        m_serialPort->write(CHECK_SIGNATURE_CMD, sizeof(CHECK_SIGNATURE_CMD));
+        m_serialPort->waitForReadyRead(SERIAL_TIMEOUT_IN_MS);
         success = checkAck();
     }
 
     if(success) {
         //Send signature
         qInfo() << "SEND SIGNATURE";
-        m_serialPort->write(ptrDataSignature, signatureSize);
-        m_serialPort->waitForReadyRead(SERIAL_TIMEOUT);
+        m_serialPort->write(ptrDataSignature, SIGNATURE_SIZE);
+        m_serialPort->waitForReadyRead(SERIAL_TIMEOUT_IN_MS);
         success = checkAck();
     }
 
@@ -419,7 +399,7 @@ bool Flasher::startFlash()
         //Send flash verifying string
         qInfo() << "VERIFY_BOOTLOADER";
         m_serialPort->write(VERIFY_FLASHER_CMD, sizeof(VERIFY_FLASHER_CMD));
-        m_serialPort->waitForReadyRead(SERIAL_TIMEOUT);
+        m_serialPort->waitForReadyRead(SERIAL_TIMEOUT_IN_MS);
         success = checkAck();
     }
 
@@ -429,7 +409,7 @@ bool Flasher::startFlash()
         sizeDataString.setNum(m_firmwareSize);
         qInfo() << "SIZE";
         m_serialPort->write(sizeDataString);
-        m_serialPort->waitForReadyRead(SERIAL_TIMEOUT);
+        m_serialPort->waitForReadyRead(SERIAL_TIMEOUT_IN_MS);
         success = checkAck();
     }
 
@@ -438,7 +418,7 @@ bool Flasher::startFlash()
         emit flashingStatusSignal("ERASING");
         qInfo() << "ERASE";
         m_serialPort->write(ERASE_CMD, sizeof(ERASE_CMD));
-        m_serialPort->waitForReadyRead(eraseTimeout);
+        m_serialPort->waitForReadyRead(ERASE_TIMEOUT_IN_MS);
         success = checkAck();
     }
 
@@ -451,7 +431,7 @@ bool Flasher::startFlash()
             ptrDataPosition = ptrDataFirmware + (dataPosition * PACKET_SIZE);
 
             m_serialPort->write(ptrDataPosition, PACKET_SIZE);
-            m_serialPort->waitForReadyRead(SERIAL_TIMEOUT);
+            m_serialPort->waitForReadyRead(SERIAL_TIMEOUT_IN_MS);
             emit updateProgress((dataPosition + 1u) * PACKET_SIZE, m_firmwareSize);
 
             success = checkAck();
@@ -466,7 +446,7 @@ bool Flasher::startFlash()
 
             if(restSize > 0u) {
                 m_serialPort->write(ptrDataFirmware + (dataPosition * PACKET_SIZE), restSize);
-                m_serialPort->waitForReadyRead(SERIAL_TIMEOUT);
+                m_serialPort->waitForReadyRead(SERIAL_TIMEOUT_IN_MS);
                 success = checkAck();
                 emit updateProgress(dataPosition * PACKET_SIZE + restSize, m_firmwareSize);
             }
@@ -493,7 +473,7 @@ bool Flasher::crcCheck(const uint8_t* data, uint32_t size)
     uint32_t crc = CalculateCRC32(data, size, false, false);
     crcData.setNum(crc);
     m_serialPort->write(crcData);
-    m_serialPort->waitForReadyRead(SERIAL_TIMEOUT);
+    m_serialPort->waitForReadyRead(SERIAL_TIMEOUT_IN_MS);
 
     return checkAck();
 }
@@ -521,11 +501,6 @@ bool Flasher::checkAck()
     return success;
 }
 
-void Flasher::startRegistrationProcedure()
-{
-    m_state = FLASHER_GET_BOARD_ID_KEY;
-}
-
 bool Flasher::openFirmwareFile(const QString& filePath)
 {
     m_fileFirmware->setFileName(filePath);
@@ -546,9 +521,9 @@ void Flasher::setFilePath(const QString& filePath)
     m_filePath = filePath;
 }
 
-void Flasher::setFlashWriteAddress(QByteArray flashWriteAddress)
+void Flasher::setState(const FlasherStates& state)
 {
-    m_flashWriteAddress = flashWriteAddress;
+    m_state = state;
 }
 
 void Flasher::sendFlashCommandToApp(void)
@@ -561,12 +536,13 @@ void Flasher::sendFlashCommandToApp(void)
 void Flasher::getVersion(void)
 {
     m_serialPort->write(VERSION_CMD, sizeof(VERSION_CMD));
-    m_serialPort->waitForReadyRead(SERIAL_TIMEOUT);
+    m_serialPort->waitForReadyRead(SERIAL_TIMEOUT_IN_MS);
     QString gitVersion = m_serialPort->readAll();
     emit textInBrowser(gitVersion);
     //qInfo() << gitVersion;
 }
 
-QThread& Flasher::getWorkerThread() {
+QThread& Flasher::getWorkerThread()
+{
     return workerThread;
 }

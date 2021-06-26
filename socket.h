@@ -49,7 +49,9 @@ public:
 
 private:
     QTcpSocket m_tcpClient;
-
+    static constexpr quint16 PORT {5322};
+    static const QByteArray SHA_KEY_COMM;
+    static const QHostAddress SERVER_ADDRESS;
 };
 
 #endif // SOCKET_H

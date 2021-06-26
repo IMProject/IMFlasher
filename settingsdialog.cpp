@@ -39,12 +39,12 @@
 #include <QLineEdit>
 #include <QSerialPortInfo>
 
-static const char blankString[] = QT_TRANSLATE_NOOP("SettingsDialog", "N/A");
+const char* SettingsDialog::BLANK_STRING = QT_TRANSLATE_NOOP("SettingsDialog", "N/A");
 
 SettingsDialog::SettingsDialog(QWidget *parent) :
     QDialog(parent),
-    m_ui(new Ui::SettingsDialog),
-    m_intValidator(new QIntValidator(0, 4000000, this))
+    m_ui(std::make_shared<Ui::SettingsDialog>()),
+    m_intValidator(std::make_shared<QIntValidator>(0, 4000000, this))
 {
     m_ui->setupUi(this);
 
@@ -65,11 +65,6 @@ SettingsDialog::SettingsDialog(QWidget *parent) :
     updateSettings();
 }
 
-SettingsDialog::~SettingsDialog()
-{
-    delete m_ui;
-}
-
 SettingsDialog::Settings SettingsDialog::settings() const
 {
     return m_currentSettings;
@@ -81,12 +76,12 @@ void SettingsDialog::showPortInfo(int idx)
         return;
 
     const QStringList list = m_ui->serialPortInfoListBox->itemData(idx).toStringList();
-    m_ui->descriptionLabel->setText(tr("Description: %1").arg(list.count() > 1 ? list.at(1) : tr(blankString)));
-    m_ui->manufacturerLabel->setText(tr("Manufacturer: %1").arg(list.count() > 2 ? list.at(2) : tr(blankString)));
-    m_ui->serialNumberLabel->setText(tr("Serial number: %1").arg(list.count() > 3 ? list.at(3) : tr(blankString)));
-    m_ui->locationLabel->setText(tr("Location: %1").arg(list.count() > 4 ? list.at(4) : tr(blankString)));
-    m_ui->vidLabel->setText(tr("Vendor Identifier: %1").arg(list.count() > 5 ? list.at(5) : tr(blankString)));
-    m_ui->pidLabel->setText(tr("Product Identifier: %1").arg(list.count() > 6 ? list.at(6) : tr(blankString)));
+    m_ui->descriptionLabel->setText(tr("Description: %1").arg(list.count() > 1 ? list.at(1) : tr(BLANK_STRING)));
+    m_ui->manufacturerLabel->setText(tr("Manufacturer: %1").arg(list.count() > 2 ? list.at(2) : tr(BLANK_STRING)));
+    m_ui->serialNumberLabel->setText(tr("Serial number: %1").arg(list.count() > 3 ? list.at(3) : tr(BLANK_STRING)));
+    m_ui->locationLabel->setText(tr("Location: %1").arg(list.count() > 4 ? list.at(4) : tr(BLANK_STRING)));
+    m_ui->vidLabel->setText(tr("Vendor Identifier: %1").arg(list.count() > 5 ? list.at(5) : tr(BLANK_STRING)));
+    m_ui->pidLabel->setText(tr("Product Identifier: %1").arg(list.count() > 6 ? list.at(6) : tr(BLANK_STRING)));
 }
 
 void SettingsDialog::apply()
@@ -102,7 +97,7 @@ void SettingsDialog::checkCustomBaudRatePolicy(int idx)
     if (isCustomBaudRate) {
         m_ui->baudRateBox->clearEditText();
         QLineEdit *edit = m_ui->baudRateBox->lineEdit();
-        edit->setValidator(m_intValidator);
+        edit->setValidator(m_intValidator.get());
     }
 }
 
@@ -158,12 +153,12 @@ void SettingsDialog::fillPortsInfo()
         manufacturer = info.manufacturer();
         serialNumber = info.serialNumber();
         list << info.portName()
-             << (!description.isEmpty() ? description : blankString)
-             << (!manufacturer.isEmpty() ? manufacturer : blankString)
-             << (!serialNumber.isEmpty() ? serialNumber : blankString)
+             << (!description.isEmpty() ? description : BLANK_STRING)
+             << (!manufacturer.isEmpty() ? manufacturer : BLANK_STRING)
+             << (!serialNumber.isEmpty() ? serialNumber : BLANK_STRING)
              << info.systemLocation()
-             << (info.vendorIdentifier() ? QString::number(info.vendorIdentifier(), 16) : blankString)
-             << (info.productIdentifier() ? QString::number(info.productIdentifier(), 16) : blankString);
+             << (info.vendorIdentifier() ? QString::number(info.vendorIdentifier(), 16) : BLANK_STRING)
+             << (info.productIdentifier() ? QString::number(info.productIdentifier(), 16) : BLANK_STRING);
 
         m_ui->serialPortInfoListBox->addItem(list.first(), list);
     }

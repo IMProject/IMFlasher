@@ -36,16 +36,8 @@
 #define SERIAL_PORT_H
 
 #include <QSerialPort>
-#include <QFile>
 #include <QTimer>
-#include "mainwindow.h"
 #include "settingsdialog.h"
-
-#define SERIAL_TIMEOUT      100u //ms
-
-class SettingsDialog;
-
-QT_BEGIN_NAMESPACE
 
 class SerialPort : public QSerialPort {
 
@@ -53,22 +45,30 @@ class SerialPort : public QSerialPort {
 
 public:
     SerialPort();
-    ~SerialPort(){}
     void openConn();
     void openConnBlocking();
     void closeConn();
-    bool isOpen();
+    bool isOpen() const;
     bool tryOpenPort();
-    bool detectBoard(void);
-    bool isBootloaderDetected(void);
-    manufacturerName getManufactName() {return m_port.manufactNameEnum;}
+    bool detectBoard();
+    bool isBootloaderDetected() const;
+    ManufacturerName getManufactName() const;
 
 private:
-    SettingsDialog *m_settings = nullptr;
+    std::unique_ptr<SettingsDialog> m_settings;
     bool m_isOpen;
     SettingsDialog::Settings m_port;
     QTimer m_timer;
     bool m_isBootlaoder;
+
+    static constexpr int TIMER_TIMEOUT_IN_MS {10000};
+    static constexpr int SERIAL_TIMEOUT_IN_MS {100};
+    static const char SOFTWARE_TYPE_CMD[14];
+    static const QString MANUFACT_IMBOOT;
+    static const QString MANUFACT_IMAPP;
+    static const QString MANUFACT_MICROSOFT;
+    static const QString SW_TYPE_IMAPP;
+    static const QString SW_TYPE_IMBOOT;
 };
 
 
