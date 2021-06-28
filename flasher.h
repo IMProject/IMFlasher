@@ -74,7 +74,7 @@ Q_OBJECT
 
 public:
     explicit Flasher();
-    ~Flasher(){}
+    ~Flasher();
 
     void init();
     void deinit();
