@@ -82,6 +82,12 @@ Flasher::Flasher() :
     }
 }
 
+Flasher::~Flasher()
+{
+    workerThread.quit();
+    workerThread.wait();
+}
+
 void Flasher::init()
 {
     Worker *worker = new Worker;
