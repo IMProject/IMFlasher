@@ -60,14 +60,15 @@ Flasher::Flasher() :
         m_fileFirmware(std::make_unique<QFile>()),
         m_keysFile(std::make_shared<QFile>()),
         m_socketClient(std::make_unique<SocketClient>()),
-        m_state(FlasherStates::TRY_CONNECT),
+        m_state(FlasherStates::INIT),
         m_firmwareSize(0),
         m_tryOpen(false),
         m_isPortOpen(false),
         m_isSecureBoot(true),
         m_boardId(),
         m_boardKey(),
-        m_jsonObject()
+        m_jsonObject(),
+        m_isTryConnectStart(false)
 {
     m_keysFile->setFileName(KEY_FILE_NAME);
     m_keysFile->open(QIODevice::ReadWrite);
@@ -106,7 +107,7 @@ void Flasher::deinit()
 
 void Flasher::openSerialPort()
 {
-    this->setState(FlasherStates::PLUG_USB);
+    this->setState(FlasherStates::TRY_TO_CONNECT);
     m_tryOpen = true;
 }
 
@@ -119,10 +120,8 @@ void Flasher::closeSerialPort()
 void Flasher::loopHandler()
 {
     bool success;
-    bool manufacturer;
 
-    switch (m_state)
-    {
+    switch (m_state) {
 
         case FlasherStates::IDLE:
             if(m_fileFirmware->isOpen() && m_serialPort->isOpen()) {
@@ -130,24 +129,52 @@ void Flasher::loopHandler()
             }
             break;
 
-        case FlasherStates::TRY_CONNECT:
-            if(m_tryOpen) {
-                manufacturer = m_serialPort->tryOpenPort();
+        case FlasherStates::INIT:
 
-                if(!manufacturer) {
-                    this->setState(FlasherStates::PLUG_USB);
+            if (m_tryOpen) {
+
+                if (!(m_serialPort->tryOpenPort())) {
+                    this->setState(FlasherStates::TRY_TO_CONNECT);
                 }
             }
 
             break;
 
-        case FlasherStates::PLUG_USB:
-            emit connectUsbToPc();
-            m_serialPort->tryOpenPort();
-            if(m_serialPort->isOpen()) {
-                this->setState(FlasherStates::CONNECTED);
+        case FlasherStates::TRY_TO_CONNECT:
+        {
+            bool isConnected = false;
+
+            if (m_isTryConnectStart) {
+
+                if (m_serialPort->tryOpenPort()) {
+
+                    if (m_serialPort->isOpen()) {
+                        this->setState(FlasherStates::CONNECTED);
+                        m_isTryConnectStart = false;
+                        isConnected = true;
+
+                    } else {
+                        emit connectUsbToPc("Trying to connect!");
+                    }
+
+                } else {
+                    emit connectUsbToPc("Trying to connect!");
+                }
+
+                if ((!isConnected) && (m_timerTryConnect.hasExpired(TRY_TO_CONNECT_TIMEOUT_IN_MS))) {
+                    emit failedToConnect();
+                    this->setState(FlasherStates::INIT);
+                    m_tryOpen = false;
+                    m_isTryConnectStart = false;
+                }
+
+            } else {
+                m_isTryConnectStart = true;
+                m_timerTryConnect.start();
             }
+
             break;
+        }
 
         case FlasherStates::CONNECTED:
 
@@ -166,6 +193,7 @@ void Flasher::loopHandler()
             break;
 
         case FlasherStates::DISCONNECTED:
+            m_isTryConnectStart = false;
             m_serialPort->closeConn();
             if(!(m_serialPort->isOpen())) {
                 emit disconnectedSerialPort();
@@ -180,7 +208,7 @@ void Flasher::loopHandler()
                 this->setState(FlasherStates::BOARD_CHECK_REGISTRATION);
             } else {
                 emit textInBrowser("Board ID Error. Unplug your board, press disconnect/connect, and plug your board again.");
-                this->setState(FlasherStates::TRY_CONNECT);
+                this->setState(FlasherStates::INIT);
             }
 
             break;

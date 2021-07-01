@@ -70,16 +70,23 @@ MainWindow::MainWindow(std::shared_ptr<Flasher> flasher, QWidget *parent) :
         m_ui->progressBar->setValue(0);
     });
 
-    connect(m_flasher.get(), &Flasher::connectUsbToPc, this, [&] (void) { this->showStatusMessage(tr("Reconnect board to PC")); });
+    connect(m_flasher.get(), &Flasher::connectUsbToPc, this, [&] (const QString& text) { this->showStatusMessage(text); });
 
     connect(m_flasher.get(), &Flasher::connectedSerialPort, this, [&] (void) {
         this->showStatusMessage(tr("Connected"));
-        this->openSerialPortUi();
+        m_ui->actionConnect->setEnabled(false);
+        m_ui->actionDisconnect->setEnabled(true);
     });
 
     connect(m_flasher.get(), &Flasher::disconnectedSerialPort, this, [&] (void) {
         this->showStatusMessage(tr("Disconnected"));
         this->closeSerialPortUi();
+    });
+
+    connect(m_flasher.get(), &Flasher::failedToConnect, this, [&] (void) {
+        this->showStatusMessage(tr("Failed to connect!"));
+        m_ui->actionConnect->setEnabled(true);
+        m_ui->actionDisconnect->setEnabled(false);
     });
 
     connect(m_flasher.get(), &Flasher::textInBrowser, this, [&] (const auto& text) { m_ui->textBrowser->append(text); });
