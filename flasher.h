@@ -102,9 +102,7 @@ public:
 signals:
     void updateProgress(const qint64& dataPosition, const qint64& firmwareSize);
     void clearProgress();
-    void connectUsbToPc(const QString& text);
-    void connectedSerialPort();
-    void disconnectedSerialPort();
+    void showStatusMsg(const QString& text);
     void failedToConnect();
     void openSerialPortInThread();
     void closeSerialPortInThread();
@@ -118,6 +116,7 @@ public slots:
 
 private:
     void showInfoMsgAtTheEndOfFlashing(const QString& title, const QString& description);
+    bool sendDisconnectCmd();
 
     std::shared_ptr<SerialPort> m_serialPort;
     std::unique_ptr<QFile> m_fileFirmware;
@@ -159,6 +158,7 @@ private:
     static const char BOARD_ID_CMD[9];
     static const char FLASH_FW_CMD[9];
     static const char CHECK_SIGNATURE_CMD[16];
+    static const char DISCONNECT_CMD[11];
 };
 
 #endif // FLASHER_H

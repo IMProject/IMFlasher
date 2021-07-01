@@ -49,6 +49,7 @@ const char Flasher::VERSION_CMD[8] = "version";
 const char Flasher::BOARD_ID_CMD[9] = "board_id";
 const char Flasher::FLASH_FW_CMD[9] = "flash_fw";
 const char Flasher::CHECK_SIGNATURE_CMD[16] = "check_signature";
+const char Flasher::DISCONNECT_CMD[11] = "disconnect";
 
 void Worker::doWork()
 {
@@ -154,11 +155,11 @@ void Flasher::loopHandler()
                         isConnected = true;
 
                     } else {
-                        emit connectUsbToPc("Trying to connect!");
+                        emit showStatusMsg("Trying to connect!");
                     }
 
                 } else {
-                    emit connectUsbToPc("Trying to connect!");
+                    emit showStatusMsg("Trying to connect!");
                 }
 
                 if ((!isConnected) && (m_timerTryConnect.hasExpired(TRY_TO_CONNECT_TIMEOUT_IN_MS))) {
@@ -178,7 +179,7 @@ void Flasher::loopHandler()
 
         case FlasherStates::CONNECTED:
 
-            emit connectedSerialPort();
+            emit showStatusMsg("Connected");
             if(m_serialPort->isOpen()) {
                 getVersion();
 
@@ -193,12 +194,30 @@ void Flasher::loopHandler()
             break;
 
         case FlasherStates::DISCONNECTED:
+        {
+            bool isDisconnectedSuccess = true;
             m_isTryConnectStart = false;
-            m_serialPort->closeConn();
-            if(!(m_serialPort->isOpen())) {
-                emit disconnectedSerialPort();
+
+            if (m_serialPort->isOpen()) {
+
+                if (m_serialPort->isBootloaderDetected()) {
+                    isDisconnectedSuccess = this->sendDisconnectCmd();
+                }
+
+                m_serialPort->closeConn();
             }
+
+            if (isDisconnectedSuccess) {
+                emit showStatusMsg("Disconnected");
+
+            } else {
+                emit showStatusMsg("Unplug board!");
+            }
+
+            this->setState(FlasherStates::IDLE);
+
             break;
+        }
 
         case FlasherStates::BOARD_ID:
 
@@ -262,7 +281,14 @@ void Flasher::loopHandler()
             std::tuple<bool, QString, QString> flashingInfo = this->startFlash();
             this->showInfoMsgAtTheEndOfFlashing(std::get<1>(flashingInfo), std::get<2>(flashingInfo));
             emit clearProgress();
-            this->setState(FlasherStates::IDLE);
+
+            if (std::get<0>(flashingInfo)) {
+                m_serialPort->closeConn();
+                this->setState(FlasherStates::TRY_TO_CONNECT);
+
+            } else {
+                this->setState(FlasherStates::IDLE);
+            }
             break;
         }
 
@@ -626,4 +652,11 @@ void Flasher::showInfoMsgAtTheEndOfFlashing(const QString& title, const QString&
     msgBox.setInformativeText(description);
     msgBox.setStandardButtons(QMessageBox::Ok);
     msgBox.exec();
+}
+
+bool Flasher::sendDisconnectCmd()
+{
+    m_serialPort->write(DISCONNECT_CMD, sizeof(DISCONNECT_CMD));
+    m_serialPort->waitForReadyRead(SERIAL_TIMEOUT_IN_MS);
+    return checkAck();
 }
