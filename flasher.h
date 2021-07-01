@@ -38,12 +38,13 @@
 #include <QJsonObject>
 #include <QThread>
 #include <QFile>
+#include <QElapsedTimer>
 #include <socket.h>
 
 enum class FlasherStates {
     IDLE,
-    TRY_CONNECT,
-    PLUG_USB,
+    INIT,
+    TRY_TO_CONNECT,
     CONNECTED,
     DISCONNECTED,
     BOARD_ID,
@@ -101,9 +102,10 @@ public:
 signals:
     void updateProgress(const qint64& dataPosition, const qint64& firmwareSize);
     void clearProgress();
-    void connectUsbToPc();
+    void connectUsbToPc(const QString& text);
     void connectedSerialPort();
     void disconnectedSerialPort();
+    void failedToConnect();
     void openSerialPortInThread();
     void closeSerialPortInThread();
     void runLoop();
@@ -131,6 +133,8 @@ private:
     QString m_boardKey;
     QJsonObject m_jsonObject;
     QString m_filePath;
+    bool m_isTryConnectStart;
+    QElapsedTimer m_timerTryConnect;
 
     static constexpr qint64 SIGNATURE_SIZE {64};
     static constexpr int ERASE_TIMEOUT_IN_MS {5000};
@@ -143,6 +147,7 @@ private:
     static constexpr int BOARD_ID_SIZE_STRING {BOARD_ID_SIZE * 2};
     static constexpr int KEY_SIZE {32};
     static constexpr int KEY_SIZE_STRING {KEY_SIZE * 2};
+    static constexpr int TRY_TO_CONNECT_TIMEOUT_IN_MS {20000};
 
     static const QString KEY_FILE_NAME;
     static const QByteArray NOT_SECURED_MAGIC_STRING;

@@ -36,7 +36,6 @@
 #define SERIAL_PORT_H
 
 #include <QSerialPort>
-#include <QTimer>
 #include "settingsdialog.h"
 
 class SerialPort : public QSerialPort {
@@ -58,10 +57,9 @@ private:
     std::unique_ptr<SettingsDialog> m_settings;
     bool m_isOpen;
     SettingsDialog::Settings m_port;
-    QTimer m_timer;
     bool m_isBootlaoder;
 
-    static constexpr int TIMER_TIMEOUT_IN_MS {10000};
+    static constexpr int TIMER_TIMEOUT_IN_MS {20000};
     static constexpr int SERIAL_TIMEOUT_IN_MS {100};
     static const char SOFTWARE_TYPE_CMD[14];
     static const QString MANUFACT_IMBOOT;

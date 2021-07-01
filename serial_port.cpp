@@ -35,6 +35,7 @@
 #include "serial_port.h"
 #include <QDebug>
 #include <QSerialPortInfo>
+#include <QElapsedTimer>
 
 const char SerialPort::SOFTWARE_TYPE_CMD[14] = "software_type";
 const QString SerialPort::MANUFACT_IMBOOT = "IMBOOT";
@@ -46,12 +47,8 @@ const QString SerialPort::SW_TYPE_IMAPP = "IMApplication";
 SerialPort::SerialPort()
     : m_settings(std::make_unique<SettingsDialog>()),
       m_isOpen(false),
-      m_timer(new QTimer),
       m_isBootlaoder(false)
 {
-    m_timer.setSingleShot(true);
-    m_timer.setInterval(TIMER_TIMEOUT_IN_MS);
-    m_timer.start();
 }
 
 void SerialPort::openConn()
@@ -74,9 +71,13 @@ void SerialPort::openConn()
 
 void SerialPort::openConnBlocking()
 {
-    while(!m_isOpen) {
+    QElapsedTimer timer;
+    timer.start();
+
+    while (!m_isOpen) {
         tryOpenPort();
-        if(m_timer.remainingTime() == 0){
+
+        if (timer.hasExpired(TIMER_TIMEOUT_IN_MS)) {
             qInfo() << "Timeout";
             break;
         }
@@ -127,13 +128,14 @@ bool SerialPort::tryOpenPort()
         if(success) {
             openConn();
 
-            // For Microsoft, we can't be sure if we are connected to the proper board so we need to check this.
-            bool isBoardDetected = detectBoard();
-            if(isBoardDetected) {
-                // we are connected to proper board, exit for loop
-                break;
-            } else {
-                if(m_isOpen) {
+            if (m_isOpen) {
+
+                // For Microsoft, we can't be sure if we are connected to the proper board so we need to check this.
+                if (detectBoard()) {
+                    // we are connected to proper board, exit for loop
+                    break;
+
+                } else {
                     closeConn();
                 }
             }
