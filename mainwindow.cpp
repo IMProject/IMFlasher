@@ -126,7 +126,7 @@ void MainWindow::initActionsConnections()
     connect(m_ui->actionAbout, &QAction::triggered, this, [&] (void) {
         QMessageBox::about(this,
                            tr("About IMFlasher"),
-                           tr("The <b>IMFlasher</b> v1.0.1"));
+                           tr("The <b>IMFlasher</b> v1.1.0"));
     });
 }
 
