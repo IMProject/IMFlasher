@@ -580,7 +580,7 @@ bool Flasher::checkAck()
 {
     bool success = false;
     const QByteArray data = m_serialPort->readAll();
-    if(data.size() > 2) {
+    if(data.size() >= 2) {
 
         if(0 == QString::compare("OK", data, Qt::CaseInsensitive)) {
             qInfo() << "ACK";
