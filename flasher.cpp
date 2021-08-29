@@ -48,6 +48,8 @@ const char Flasher::ERASE_CMD[6] = "erase";
 const char Flasher::VERSION_CMD[8] = "version";
 const char Flasher::BOARD_ID_CMD[9] = "board_id";
 const char Flasher::FLASH_FW_CMD[9] = "flash_fw";
+const char Flasher::ENTER_BL_CMD[9] = "enter_bl";
+const char Flasher::EXIT_BL_CMD[8] = "exit_bl";
 const char Flasher::CHECK_SIGNATURE_CMD[16] = "check_signature";
 const char Flasher::DISCONNECT_CMD[11] = "disconnect";
 
@@ -593,7 +595,6 @@ bool Flasher::checkAck()
 
     } else {
         qInfo() << "NO ACK";
-        success = false;
     }
 
     return success;
@@ -624,8 +625,35 @@ void Flasher::setState(const FlasherStates& state)
     m_state = state;
 }
 
+
+bool Flasher::sendEnterBootlaoderCommandToApp(void)
+{
+    bool success;
+    qInfo() << "Send enter bl command";
+    m_serialPort->write(ENTER_BL_CMD, sizeof(ENTER_BL_CMD));
+    m_serialPort->waitForReadyRead(SERIAL_TIMEOUT_IN_MS);
+    success = checkAck();
+
+    if(success) {
+        QThread::msleep(400); //wait for restart
+    }
+
+    return success;
+}
+
+bool Flasher::sendExitBootlaoderCommandToApp(void)
+{
+    bool success;
+    qInfo() << "Send exit bl command";
+    m_serialPort->write(EXIT_BL_CMD, sizeof(EXIT_BL_CMD));
+    m_serialPort->waitForReadyRead(SERIAL_TIMEOUT_IN_MS);
+    success = checkAck();
+    return success;
+}
+
 void Flasher::sendFlashCommandToApp(void)
 {
+    qInfo() << "Send flash command";
     m_serialPort->write(FLASH_FW_CMD, sizeof(FLASH_FW_CMD));
     m_serialPort->waitForBytesWritten(1000);
     QThread::msleep(400); //wait for restart

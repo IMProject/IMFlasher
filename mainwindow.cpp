@@ -51,6 +51,7 @@ MainWindow::MainWindow(std::shared_ptr<Flasher> flasher, QWidget *parent) :
     m_ui->actionDisconnect->setEnabled(false);
     m_ui->actionQuit->setEnabled(true);
     m_ui->loadFirmware->setEnabled(false);
+    m_ui->enterBootloader->setEnabled(true);
 
     m_ui->progressBar->hide();
     m_ui->progressBar->setValue(0);
@@ -104,14 +105,19 @@ void MainWindow::isBootloaderUi(const bool& bootloader)
     m_isBootloader = bootloader;
 
     if(bootloader) {
-        m_ui->loadFirmware->setText("Load");
         m_ui->loadFirmware->setEnabled(false);
         m_ui->selectFirmware->setEnabled(true);
         m_ui->registerButton->setEnabled(false);
+        m_ui->enterBootloader->setText("Exit Bootlaoder");
+
+        if (m_isOverRAM) {
+            m_ui->enterBootloader->setEnabled(false);
+        }
+
     } else {
-        m_ui->loadFirmware->setText("Enter bootloader");
-        m_ui->loadFirmware->setEnabled(true);
+        m_ui->loadFirmware->setEnabled(false);
         m_ui->selectFirmware->setEnabled(false);
+        m_ui->enterBootloader->setText("Enter Bootlaoder");
     }
 }
 
@@ -126,7 +132,7 @@ void MainWindow::initActionsConnections()
     connect(m_ui->actionAbout, &QAction::triggered, this, [&] (void) {
         QMessageBox::about(this,
                            tr("About IMFlasher"),
-                           tr("The <b>IMFlasher</b> v1.1.0"));
+                           tr("The <b>IMFlasher</b> v1.2.0"));
     });
 }
 
@@ -156,14 +162,34 @@ void MainWindow::on_loadFirmware_clicked()
         m_ui->progressBar->show();
         m_flasher->setState(FlasherStates::FLASH);
 
-    } else {
-        m_flasher->sendFlashCommandToApp();
-        closeSerialPortUi();
-        openSerialPortUi();
     }
 }
 
 void MainWindow::on_registerButton_clicked()
 {
     m_flasher->setState(FlasherStates::GET_BOARD_ID_KEY);
+}
+
+void MainWindow::on_enterBootloader_clicked()
+{
+    if(m_isBootloader) {
+        bool success = m_flasher->sendExitBootlaoderCommandToApp();
+        if(success) {
+            isBootloaderUi(false);
+        }
+
+    } else {
+        bool success = m_flasher->sendEnterBootlaoderCommandToApp();
+
+        if(success) {
+            m_isOverRAM = true;
+        } else {
+            //TODO: add popup window to inform the user that exit without flashing is not possible
+            m_flasher->sendFlashCommandToApp();
+            m_isOverRAM = false;
+        }
+    }
+
+    closeSerialPortUi();
+    openSerialPortUi();
 }

@@ -95,7 +95,9 @@ public:
     void deserialize32(uint8_t* buf, uint32_t* value);
     void setFilePath(const QString& filePath);
     void setState(const FlasherStates& state);
-    void sendFlashCommandToApp(void); //enter in bootlaoder
+    bool sendEnterBootlaoderCommandToApp(void); //enter in bootlaoder, no Falsh FW needed to exit
+    bool sendExitBootlaoderCommandToApp(void);
+    void sendFlashCommandToApp(void); //enter in bootlaoder, can't exit without FW flash
     void getVersion(void);
     QThread& getWorkerThread();
 
@@ -157,6 +159,8 @@ private:
     static const char VERSION_CMD[8];
     static const char BOARD_ID_CMD[9];
     static const char FLASH_FW_CMD[9];
+    static const char ENTER_BL_CMD[9];
+    static const char EXIT_BL_CMD[8];
     static const char CHECK_SIGNATURE_CMD[16];
     static const char DISCONNECT_CMD[11];
 };

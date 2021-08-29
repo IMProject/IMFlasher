@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>676</width>
-    <height>450</height>
+    <height>482</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -24,26 +24,13 @@
      </rect>
     </property>
    </widget>
-   <widget class="QLabel" name="statusLabel">
-    <property name="geometry">
-     <rect>
-      <x>30</x>
-      <y>330</y>
-      <width>191</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string/>
-    </property>
-   </widget>
    <widget class="QProgressBar" name="progressBar">
     <property name="geometry">
      <rect>
       <x>209</x>
       <y>213</y>
       <width>450</width>
-      <height>100</height>
+      <height>131</height>
      </rect>
     </property>
     <property name="sizePolicy">
@@ -62,74 +49,82 @@
      <number>24</number>
     </property>
    </widget>
-   <widget class="QPushButton" name="selectFirmware">
+   <widget class="QWidget" name="">
     <property name="geometry">
      <rect>
       <x>19</x>
       <y>214</y>
-      <width>171</width>
-      <height>30</height>
+      <width>181</width>
+      <height>166</height>
      </rect>
     </property>
-    <property name="sizePolicy">
-     <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-      <horstretch>0</horstretch>
-      <verstretch>0</verstretch>
-     </sizepolicy>
-    </property>
-    <property name="minimumSize">
-     <size>
-      <width>130</width>
-      <height>30</height>
-     </size>
-    </property>
-    <property name="text">
-     <string>Firmware</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="loadFirmware">
-    <property name="geometry">
-     <rect>
-      <x>19</x>
-      <y>250</y>
-      <width>171</width>
-      <height>30</height>
-     </rect>
-    </property>
-    <property name="sizePolicy">
-     <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-      <horstretch>0</horstretch>
-      <verstretch>0</verstretch>
-     </sizepolicy>
-    </property>
-    <property name="minimumSize">
-     <size>
-      <width>130</width>
-      <height>30</height>
-     </size>
-    </property>
-    <property name="text">
-     <string>Load</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="registerButton">
-    <property name="geometry">
-     <rect>
-      <x>19</x>
-      <y>286</y>
-      <width>171</width>
-      <height>30</height>
-     </rect>
-    </property>
-    <property name="minimumSize">
-     <size>
-      <width>130</width>
-      <height>30</height>
-     </size>
-    </property>
-    <property name="text">
-     <string>Register</string>
-    </property>
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <item>
+      <widget class="QPushButton" name="selectFirmware">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>130</width>
+         <height>30</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>Firmware</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="loadFirmware">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>130</width>
+         <height>30</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>Load</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="registerButton">
+       <property name="minimumSize">
+        <size>
+         <width>130</width>
+         <height>30</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>Register</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="enterBootloader">
+       <property name="text">
+        <string>Enter Bootloader</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="statusLabel">
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menuBar">
@@ -138,7 +133,7 @@
      <x>0</x>
      <y>0</y>
      <width>676</width>
-     <height>24</height>
+     <height>27</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuCalls">
