@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
         ManufacturerName manufactName = flasher->getSerialPort()->getManufactName();
 
         if (!(flasher->getSerialPort()->isBootloaderDetected())) {
-            flasher->sendFlashCommandToApp();
+            flasher->sendFlashCommand();
             qInfo() << "Unplug USB run this app again and plug USB! ";
 
         } else if ((manufactName == ManufacturerName::IMBOOT) || (manufactName == ManufacturerName::MICROSOFT)) {

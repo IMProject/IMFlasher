@@ -57,14 +57,17 @@ public:
     void showStatusMessage(const QString &message);
     void openSerialPortUi();
     void closeSerialPortUi();
+    bool showInfoMsg(const QString& title, const QString& description);
 
 private slots:
     void isBootloaderUi(const bool& bootloader);
+    void isReadProtectionEnabledUi(const bool& isProteced);
 
     void on_selectFirmware_clicked();
     void on_loadFirmware_clicked();
     void on_registerButton_clicked();
     void on_enterBootloader_clicked();
+    void on_protectButton_clicked();
 
 private:
     void initActionsConnections();
@@ -74,6 +77,7 @@ private:
     std::shared_ptr<Flasher> m_flasher;
     bool m_isBootloader; // USB can be connected to bootloader or application
     bool m_isOverRAM;    // If inside BL over RAM enable exit, over FLASH can't exit.
+    bool m_isReadProtectionEnabled;  // Firmware is protected
 };
 
 #endif // MAINWINDOW_H

@@ -49,6 +49,9 @@ const char Flasher::VERSION_CMD[8] = "version";
 const char Flasher::BOARD_ID_CMD[9] = "board_id";
 const char Flasher::FLASH_FW_CMD[9] = "flash_fw";
 const char Flasher::ENTER_BL_CMD[9] = "enter_bl";
+const char Flasher::IS_FW_PROTECTED_CMD[16] = "is_fw_protected";
+const char Flasher::ENABLE_FW_PROTECTION_CMD[21] = "enable_fw_protection";
+const char Flasher::DISABLE_FW_PROTECTION_CMD[22] = "disable_fw_protection";
 const char Flasher::EXIT_BL_CMD[8] = "exit_bl";
 const char Flasher::CHECK_SIGNATURE_CMD[16] = "check_signature";
 const char Flasher::DISCONNECT_CMD[11] = "disconnect";
@@ -118,6 +121,13 @@ void Flasher::closeSerialPort()
 {
     this->setState(FlasherStates::DISCONNECTED);
     m_tryOpen = false;
+}
+
+void Flasher::reopenSerialPort()
+{
+    closeSerialPort();
+    QThread::msleep(400);
+    openSerialPort();
 }
 
 void Flasher::loopHandler()
@@ -241,6 +251,9 @@ void Flasher::loopHandler()
             } else {
                 emit textInBrowser("Board is not registered! Press the register button");
             }
+
+            emit isReadProtectionEnabled(checkIfFirmwareIsProtected());
+
             this->setState(FlasherStates::IDLE);
 
             break;
@@ -281,7 +294,7 @@ void Flasher::loopHandler()
         case FlasherStates::FLASH:
         {
             std::tuple<bool, QString, QString> flashingInfo = this->startFlash();
-            this->showInfoMsgAtTheEndOfFlashing(std::get<1>(flashingInfo), std::get<2>(flashingInfo));
+            this->showInfoMsg(std::get<1>(flashingInfo), std::get<2>(flashingInfo));
             emit clearProgress();
 
             if (std::get<0>(flashingInfo)) {
@@ -333,7 +346,6 @@ bool Flasher::collectBoardId()
         } else {
             qInfo() << "Board id error";
         }
-
     }
 
     return success;
@@ -551,7 +563,7 @@ std::tuple<bool, QString, QString> Flasher::startFlash()
 
         if (success) {
             qInfo() << "CRC";
-            this->crcCheck((const uint8_t*) ptrDataFirmware, m_firmwareSize);
+            success = this->crcCheck((const uint8_t*) ptrDataFirmware, m_firmwareSize);
 
             if (success) {
                 title = "Flashing process done";
@@ -600,6 +612,24 @@ bool Flasher::checkAck()
     return success;
 }
 
+bool Flasher::checkTrue()
+{
+    //TODO: better handeling needed. For error flase is returned
+    bool success = false;
+    const QByteArray data = m_serialPort->readAll();
+
+    if(0 == QString::compare("TRUE", data, Qt::CaseInsensitive)) {
+        qInfo() << "TRUE";
+        success = true;
+    } else if (0 == QString::compare("FALSE", data, Qt::CaseInsensitive)) {
+        qInfo() << "FALSE";
+    } else {
+        qInfo() << "ERROR or TIMEOUT";
+    }
+
+    return success;
+}
+
 bool Flasher::openFirmwareFile(const QString& filePath)
 {
     m_fileFirmware->setFileName(filePath);
@@ -626,7 +656,7 @@ void Flasher::setState(const FlasherStates& state)
 }
 
 
-bool Flasher::sendEnterBootlaoderCommandToApp(void)
+bool Flasher::sendEnterBootloaderCommand(void)
 {
     bool success;
     qInfo() << "Send enter bl command";
@@ -641,7 +671,7 @@ bool Flasher::sendEnterBootlaoderCommandToApp(void)
     return success;
 }
 
-bool Flasher::sendExitBootlaoderCommandToApp(void)
+bool Flasher::sendExitBootlaoderCommand(void)
 {
     bool success;
     qInfo() << "Send exit bl command";
@@ -651,12 +681,43 @@ bool Flasher::sendExitBootlaoderCommandToApp(void)
     return success;
 }
 
-void Flasher::sendFlashCommandToApp(void)
+void Flasher::sendFlashCommand(void)
 {
     qInfo() << "Send flash command";
     m_serialPort->write(FLASH_FW_CMD, sizeof(FLASH_FW_CMD));
     m_serialPort->waitForBytesWritten(1000);
     QThread::msleep(400); //wait for restart
+}
+
+bool Flasher::checkIfFirmwareIsProtected(void)
+{
+    bool success;
+    qInfo() << "Send is firmware protected command";
+    m_serialPort->write(IS_FW_PROTECTED_CMD, sizeof(IS_FW_PROTECTED_CMD));
+    m_serialPort->waitForReadyRead(SERIAL_TIMEOUT_IN_MS);
+    success = checkTrue();
+    return success;
+}
+
+bool Flasher::sendEnableFirmwareProtection(void)
+{
+    bool success;
+    qInfo() << "Send enable firmware protected command";
+    m_serialPort->write(ENABLE_FW_PROTECTION_CMD, sizeof(ENABLE_FW_PROTECTION_CMD));
+    m_serialPort->waitForReadyRead(SERIAL_TIMEOUT_IN_MS);
+    success = checkAck();
+    showInfoMsg("Enable readout protection", "Powercyle the board!");
+    return success;
+}
+
+bool Flasher::sendDisableFirmwareProtection(void)
+{
+        bool success;
+        qInfo() << "Send disable firmware protected command";
+        m_serialPort->write(DISABLE_FW_PROTECTION_CMD, sizeof(DISABLE_FW_PROTECTION_CMD));
+        m_serialPort->waitForReadyRead(SERIAL_TIMEOUT_IN_MS);
+        success = checkAck();
+        return success;
 }
 
 void Flasher::getVersion(void)
@@ -673,7 +734,7 @@ QThread& Flasher::getWorkerThread()
     return workerThread;
 }
 
-void Flasher::showInfoMsgAtTheEndOfFlashing(const QString& title, const QString& description)
+void Flasher::showInfoMsg(const QString& title, const QString& description)
 {
     QMessageBox msgBox;
     msgBox.setText(title);

@@ -89,15 +89,20 @@ public:
     std::tuple<bool, QString, QString> startFlash();
     bool crcCheck(const uint8_t* data, uint32_t size);
     bool checkAck();
+    bool checkTrue();
     bool openFirmwareFile(const QString& filePath);
     void openSerialPort();
     void closeSerialPort();
+    void reopenSerialPort();
     void deserialize32(uint8_t* buf, uint32_t* value);
     void setFilePath(const QString& filePath);
     void setState(const FlasherStates& state);
-    bool sendEnterBootlaoderCommandToApp(void); //enter in bootlaoder, no Falsh FW needed to exit
-    bool sendExitBootlaoderCommandToApp(void);
-    void sendFlashCommandToApp(void); //enter in bootlaoder, can't exit without FW flash
+    bool sendEnterBootloaderCommand(void); //enter in bootlaoder, no Falsh FW needed to exit
+    bool sendExitBootlaoderCommand(void);
+    void sendFlashCommand(void); //enter in bootlaoder, can't exit without FW flash
+    bool checkIfFirmwareIsProtected(void);
+    bool sendEnableFirmwareProtection(void);
+    bool sendDisableFirmwareProtection(void);
     void getVersion(void);
     QThread& getWorkerThread();
 
@@ -111,13 +116,14 @@ signals:
     void runLoop();
     void textInBrowser(const QString& boardId);
     void isBootloader(const bool& bootloader);
+    void isReadProtectionEnabled(const bool& enabled);
     void readyToFlashId();
 
 public slots:
     void loopHandler();
 
 private:
-    void showInfoMsgAtTheEndOfFlashing(const QString& title, const QString& description);
+    void showInfoMsg(const QString& title, const QString& description);
     bool sendDisconnectCmd();
 
     std::shared_ptr<SerialPort> m_serialPort;
@@ -160,6 +166,9 @@ private:
     static const char BOARD_ID_CMD[9];
     static const char FLASH_FW_CMD[9];
     static const char ENTER_BL_CMD[9];
+    static const char IS_FW_PROTECTED_CMD[16];
+    static const char ENABLE_FW_PROTECTION_CMD[21];
+    static const char DISABLE_FW_PROTECTION_CMD[22];
     static const char EXIT_BL_CMD[8];
     static const char CHECK_SIGNATURE_CMD[16];
     static const char DISCONNECT_CMD[11];

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>676</width>
-    <height>482</height>
+    <height>515</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -49,16 +49,23 @@
      <number>24</number>
     </property>
    </widget>
-   <widget class="QWidget" name="">
+   <widget class="QWidget" name="layoutWidget">
     <property name="geometry">
      <rect>
       <x>19</x>
       <y>214</y>
       <width>181</width>
-      <height>166</height>
+      <height>270</height>
      </rect>
     </property>
     <layout class="QVBoxLayout" name="verticalLayout">
+     <item>
+      <widget class="QPushButton" name="enterBootloader">
+       <property name="text">
+        <string>Enter bootloader</string>
+       </property>
+      </widget>
+     </item>
      <item>
       <widget class="QPushButton" name="selectFirmware">
        <property name="sizePolicy">
@@ -98,6 +105,13 @@
       </widget>
      </item>
      <item>
+      <widget class="QPushButton" name="protectButton">
+       <property name="text">
+        <string>Enable read protection</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QPushButton" name="registerButton">
        <property name="minimumSize">
         <size>
@@ -107,13 +121,6 @@
        </property>
        <property name="text">
         <string>Register</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="enterBootloader">
-       <property name="text">
-        <string>Enter Bootloader</string>
        </property>
       </widget>
      </item>
@@ -204,7 +211,7 @@
      <normaloff>:/images/connect.png</normaloff>:/images/connect.png</iconset>
    </property>
    <property name="text">
-    <string>C&amp;onnect</string>
+    <string>&amp;Connect</string>
    </property>
    <property name="toolTip">
     <string>Connect to serial port</string>

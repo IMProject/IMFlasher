@@ -50,8 +50,9 @@ MainWindow::MainWindow(std::shared_ptr<Flasher> flasher, QWidget *parent) :
     m_ui->actionConnect->setEnabled(true);
     m_ui->actionDisconnect->setEnabled(false);
     m_ui->actionQuit->setEnabled(true);
-    m_ui->loadFirmware->setEnabled(false);
     m_ui->enterBootloader->setEnabled(true);
+    m_ui->loadFirmware->setEnabled(false);
+    m_ui->protectButton->setEnabled(false);
 
     m_ui->progressBar->hide();
     m_ui->progressBar->setValue(0);
@@ -80,9 +81,8 @@ MainWindow::MainWindow(std::shared_ptr<Flasher> flasher, QWidget *parent) :
     });
 
     connect(m_flasher.get(), &Flasher::textInBrowser, this, [&] (const auto& text) { m_ui->textBrowser->append(text); });
-
     connect(m_flasher.get(), &Flasher::isBootloader, this, &MainWindow::isBootloaderUi);
-
+    connect(m_flasher.get(), &Flasher::isReadProtectionEnabled, this, &MainWindow::isReadProtectionEnabledUi);
     connect(m_flasher.get(), &Flasher::readyToFlashId, this, [&] (void) { m_ui->loadFirmware->setEnabled(true); });
 }
 
@@ -105,19 +105,33 @@ void MainWindow::isBootloaderUi(const bool& bootloader)
     m_isBootloader = bootloader;
 
     if(bootloader) {
+        m_ui->enterBootloader->setText("Exit bootlaoder");
         m_ui->loadFirmware->setEnabled(false);
         m_ui->selectFirmware->setEnabled(true);
+        m_ui->protectButton->setEnabled(true);
         m_ui->registerButton->setEnabled(false);
-        m_ui->enterBootloader->setText("Exit Bootlaoder");
 
         if (m_isOverRAM) {
-            m_ui->enterBootloader->setEnabled(false);
+            m_ui->enterBootloader->setEnabled(true);
         }
 
     } else {
+        m_ui->enterBootloader->setText("Enter bootlaoder");
+        m_ui->enterBootloader->setEnabled(true);
         m_ui->loadFirmware->setEnabled(false);
         m_ui->selectFirmware->setEnabled(false);
-        m_ui->enterBootloader->setText("Enter Bootlaoder");
+        m_ui->protectButton->setEnabled(false);
+    }
+}
+
+void MainWindow::isReadProtectionEnabledUi(const bool& enabled)
+{
+    m_isReadProtectionEnabled = enabled;
+
+    if(enabled) {
+        m_ui->protectButton->setText("Disable read protection");
+    } else {
+        m_ui->protectButton->setText("Enable read protection");
     }
 }
 
@@ -161,7 +175,6 @@ void MainWindow::on_loadFirmware_clicked()
         m_ui->loadFirmware->setEnabled(false);
         m_ui->progressBar->show();
         m_flasher->setState(FlasherStates::FLASH);
-
     }
 }
 
@@ -173,23 +186,60 @@ void MainWindow::on_registerButton_clicked()
 void MainWindow::on_enterBootloader_clicked()
 {
     if(m_isBootloader) {
-        bool success = m_flasher->sendExitBootlaoderCommandToApp();
+        bool success = m_flasher->sendExitBootlaoderCommand();
         if(success) {
             isBootloaderUi(false);
         }
 
     } else {
-        bool success = m_flasher->sendEnterBootlaoderCommandToApp();
+        bool success = m_flasher->sendEnterBootloaderCommand();
 
         if(success) {
             m_isOverRAM = true;
         } else {
-            //TODO: add popup window to inform the user that exit without flashing is not possible
-            m_flasher->sendFlashCommandToApp();
+            m_flasher->sendFlashCommand();
             m_isOverRAM = false;
         }
     }
 
-    closeSerialPortUi();
-    openSerialPortUi();
+    m_flasher->reopenSerialPort();
+}
+
+void MainWindow::on_protectButton_clicked()
+{
+    if(!m_isReadProtectionEnabled) {
+
+        bool success = m_flasher->sendEnableFirmwareProtection();
+        if(success) {
+            m_flasher->reopenSerialPort();
+        }
+
+    } else {
+
+        bool proceed = showInfoMsg("Disable read protection", "Once disabled, complete flash will be erased including bootloader!");
+
+        if(proceed) {
+            bool success = m_flasher->sendDisableFirmwareProtection();
+            if(success) {
+                m_ui->protectButton->setEnabled(false);
+            }
+        }
+    }
+}
+
+bool MainWindow::showInfoMsg(const QString& title, const QString& description)
+{
+    bool retVal = false;
+    QMessageBox msgBox;
+    msgBox.setText(title);
+    msgBox.setInformativeText(description);
+    msgBox.setStandardButtons(QMessageBox::Ok);
+    msgBox.addButton(QMessageBox::Cancel);
+    if(msgBox.exec() == QMessageBox::Ok){
+      retVal = true;
+    }else {
+      // do something else
+    }
+
+    return retVal;
 }
