@@ -37,21 +37,23 @@
 
 #include <QMainWindow>
 
-QT_BEGIN_NAMESPACE
-
 namespace Ui {
 class MainWindow;
 }
 
-QT_END_NAMESPACE
-
+namespace flasher {
 class Flasher;
+}
 
-class MainWindow : public QMainWindow {
+namespace gui {
+
+class MainWindow : public QMainWindow
+{
     Q_OBJECT
 
 public:
-    explicit MainWindow(std::shared_ptr<Flasher> flasher, QWidget *parent = nullptr);
+    explicit MainWindow(std::shared_ptr<flasher::Flasher> flasher, QWidget *parent = nullptr);
+    ~MainWindow();
 
     void closeSerialPort();
     void showStatusMessage(const QString &message);
@@ -74,10 +76,11 @@ private:
 
 private:
     std::shared_ptr<Ui::MainWindow> m_ui;
-    std::shared_ptr<Flasher> m_flasher;
+    std::shared_ptr<flasher::Flasher> m_flasher;
     bool m_isBootloader; // USB can be connected to bootloader or application
     bool m_isOverRAM;    // If inside BL over RAM enable exit, over FLASH can't exit.
     bool m_isReadProtectionEnabled;  // Firmware is protected
 };
 
+} // namespace gui
 #endif // MAINWINDOW_H

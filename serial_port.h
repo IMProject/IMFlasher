@@ -36,14 +36,18 @@
 #define SERIAL_PORT_H
 
 #include <QSerialPort>
+
 #include "settingsdialog.h"
 
-class SerialPort : public QSerialPort {
+namespace communication {
 
+class SerialPort : public QSerialPort
+{
     Q_OBJECT
 
 public:
     SerialPort();
+    ~SerialPort();
     void openConn();
     void openConnBlocking();
     void closeConn();
@@ -58,16 +62,7 @@ private:
     bool m_isOpen;
     SettingsDialog::Settings m_port;
     bool m_isBootlaoder;
-
-    static constexpr int TIMER_TIMEOUT_IN_MS {20000};
-    static constexpr int SERIAL_TIMEOUT_IN_MS {100};
-    static const char SOFTWARE_TYPE_CMD[14];
-    static const QString MANUFACT_IMBOOT;
-    static const QString MANUFACT_IMAPP;
-    static const QString MANUFACT_MICROSOFT;
-    static const QString SW_TYPE_IMAPP;
-    static const QString SW_TYPE_IMBOOT;
 };
 
-
+} // namespace communication
 #endif // SERIAL_PORT_H

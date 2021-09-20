@@ -35,26 +35,18 @@
 #ifndef FLASHER_H
 #define FLASHER_H
 
+#include <QElapsedTimer>
+#include <QFile>
 #include <QJsonObject>
 #include <QThread>
-#include <QFile>
-#include <QElapsedTimer>
-#include <socket.h>
 
-enum class FlasherStates {
-    IDLE,
-    INIT,
-    TRY_TO_CONNECT,
-    CONNECTED,
-    DISCONNECTED,
-    BOARD_ID,
-    GET_BOARD_ID_KEY,
-    BOARD_CHECK_REGISTRATION,       //!< Check if file exist and size of key
-    OPEN_FILE,
-    FLASH
-};
-
+namespace communication {
 class SerialPort;
+class SocketClient;
+} // namespace communication
+
+QT_BEGIN_NAMESPACE
+class QFile;
 
 class Worker : public QObject
 {
@@ -66,20 +58,33 @@ public slots:
 signals:
     void flasherLoop();
 };
+QT_END_NAMESPACE
 
+namespace flasher {
 
-class Flasher : public QObject {
+enum class FlasherStates {
+    kIdle,
+    kInit,
+    kTryToConnect,
+    kConnected,
+    kDisconnected,
+    kBoardId,
+    kGetBoardIdKey,
+    kBoardCheckRegistration,
+    kOpenFile,
+    kFlash
+};
 
-Q_OBJECT
-    QThread workerThread;
+class Flasher : public QObject
+{
+    Q_OBJECT
 
 public:
-    explicit Flasher();
+    Flasher();
     ~Flasher();
 
     void init();
-    void deinit();
-    std::shared_ptr<SerialPort> getSerialPort() const;
+    std::shared_ptr<communication::SerialPort> getSerialPort() const;
     bool collectBoardId();
     bool getBoardKey();
     void saveBoardKeyToFile();
@@ -94,7 +99,6 @@ public:
     void openSerialPort();
     void closeSerialPort();
     void reopenSerialPort();
-    void deserialize32(uint8_t* buf, uint32_t* value);
     void setFilePath(const QString& filePath);
     void setState(const FlasherStates& state);
     bool sendEnterBootloaderCommand(void); //enter in bootlaoder, no Falsh FW needed to exit
@@ -123,13 +127,11 @@ public slots:
     void loopHandler();
 
 private:
-    void showInfoMsg(const QString& title, const QString& description);
-    bool sendDisconnectCmd();
-
-    std::shared_ptr<SerialPort> m_serialPort;
+    QThread workerThread;
+    std::shared_ptr<communication::SerialPort> m_serialPort;
     std::unique_ptr<QFile> m_fileFirmware;
     std::shared_ptr<QFile> m_keysFile;
-    std::unique_ptr<SocketClient> m_socketClient;
+    std::unique_ptr<communication::SocketClient> m_socketClient;
 
     FlasherStates m_state;
     qint64 m_firmwareSize;
@@ -143,35 +145,8 @@ private:
     bool m_isTryConnectStart;
     QElapsedTimer m_timerTryConnect;
 
-    static constexpr qint64 SIGNATURE_SIZE {64};
-    static constexpr int ERASE_TIMEOUT_IN_MS {5000};
-    static constexpr qint64 PACKET_SIZE {256};
-    static constexpr unsigned long THREAD_SLEEP_TIME_IN_MS {100U};
-    static constexpr int SERIAL_TIMEOUT_IN_MS {100};
-    static constexpr int COLLECT_BOARD_ID_SERIAL_TIMEOUT_IN_MS {300};
-    static constexpr int CRC32_SIZE {4};
-    static constexpr int BOARD_ID_SIZE {32};
-    static constexpr int BOARD_ID_SIZE_STRING {BOARD_ID_SIZE * 2};
-    static constexpr int KEY_SIZE {32};
-    static constexpr int KEY_SIZE_STRING {KEY_SIZE * 2};
-    static constexpr int TRY_TO_CONNECT_TIMEOUT_IN_MS {20000};
-
-    static const QString KEY_FILE_NAME;
-    static const QByteArray NOT_SECURED_MAGIC_STRING;
-
-    // Commands
-    static const char VERIFY_FLASHER_CMD[17];
-    static const char ERASE_CMD[6];
-    static const char VERSION_CMD[8];
-    static const char BOARD_ID_CMD[9];
-    static const char FLASH_FW_CMD[9];
-    static const char ENTER_BL_CMD[9];
-    static const char IS_FW_PROTECTED_CMD[16];
-    static const char ENABLE_FW_PROTECTION_CMD[21];
-    static const char DISABLE_FW_PROTECTION_CMD[22];
-    static const char EXIT_BL_CMD[8];
-    static const char CHECK_SIGNATURE_CMD[16];
-    static const char DISCONNECT_CMD[11];
+    bool sendDisconnectCmd();
 };
 
+} // namespace flasher
 #endif // FLASHER_H

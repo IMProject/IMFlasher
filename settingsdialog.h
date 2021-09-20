@@ -38,27 +38,30 @@
 #include <QDialog>
 #include <QSerialPort>
 
-QT_BEGIN_NAMESPACE
-
 namespace Ui {
 class SettingsDialog;
 }
 
+QT_BEGIN_NAMESPACE
+class QIntValidator;
 QT_END_NAMESPACE
 
-enum class ManufacturerName {
-    IMBOOT = 0,
-    IMAPP,
-    MICROSOFT
-};
+namespace communication {
 
-class QIntValidator;
+enum class ManufacturerName {
+    kImBoot = 0,
+    kImApp,
+    kMicrosoft
+};
 
 class SettingsDialog : public QDialog
 {
     Q_OBJECT
 
 public:
+    explicit SettingsDialog(QWidget *parent = nullptr);
+    ~SettingsDialog();
+
     struct Settings {
         QString name;
         qint32 baudRate;
@@ -76,9 +79,7 @@ public:
         bool isProperDevice;
     };
 
-    explicit SettingsDialog(QWidget *parent = nullptr);
-
-    Settings settings() const;
+    Settings GetCurrentSettings() const;
     void updateSettings();
 
 private slots:
@@ -95,7 +96,7 @@ private:
     std::shared_ptr<Ui::SettingsDialog> m_ui;
     Settings m_currentSettings;
     std::shared_ptr<QIntValidator> m_intValidator;
-    static const char* BLANK_STRING;
 };
 
+} // namespace communication
 #endif // SETTINGSDIALOG_H

@@ -33,13 +33,17 @@
  ****************************************************************************/
 
 #include "mainwindow.h"
+
+#include <QDebug>
+#include <QFileDialog>
+#include <QMessageBox>
+
 #include "ui_mainwindow.h"
 #include "flasher.h"
 
-#include <QMessageBox>
-#include <QFileDialog>
+namespace gui {
 
-MainWindow::MainWindow(std::shared_ptr<Flasher> flasher, QWidget *parent) :
+MainWindow::MainWindow(std::shared_ptr<flasher::Flasher> flasher, QWidget *parent) :
     QMainWindow(parent),
     m_ui(std::make_shared<Ui::MainWindow>()),
     m_flasher(flasher),
@@ -61,30 +65,32 @@ MainWindow::MainWindow(std::shared_ptr<Flasher> flasher, QWidget *parent) :
 
     this->initActionsConnections();
 
-    connect(m_flasher.get(), &Flasher::updateProgress, this, [&] (const qint64& sentSize, const qint64& firmwareSize) {
+    connect(m_flasher.get(), &flasher::Flasher::updateProgress, this, [&] (const qint64& sentSize, const qint64& firmwareSize) {
         int progressPercentage = (100 * sentSize) / firmwareSize;
         m_ui->progressBar->setValue(progressPercentage);
         qInfo() << sentSize << "/" << firmwareSize << "B, " << progressPercentage <<"%";
     });
 
-    connect(m_flasher.get(), &Flasher::clearProgress, this, [&] (void) {
+    connect(m_flasher.get(), &flasher::Flasher::clearProgress, this, [&] (void) {
         m_ui->progressBar->hide();
         m_ui->progressBar->setValue(0);
     });
 
-    connect(m_flasher.get(), &Flasher::showStatusMsg, this, [&] (const QString& text) { this->showStatusMessage(text); });
+    connect(m_flasher.get(), &flasher::Flasher::showStatusMsg, this, [&] (const QString& text) { this->showStatusMessage(text); });
 
-    connect(m_flasher.get(), &Flasher::failedToConnect, this, [&] (void) {
+    connect(m_flasher.get(), &flasher::Flasher::failedToConnect, this, [&] (void) {
         this->showStatusMessage(tr("Failed to connect!"));
         m_ui->actionConnect->setEnabled(true);
         m_ui->actionDisconnect->setEnabled(false);
     });
 
-    connect(m_flasher.get(), &Flasher::textInBrowser, this, [&] (const auto& text) { m_ui->textBrowser->append(text); });
-    connect(m_flasher.get(), &Flasher::isBootloader, this, &MainWindow::isBootloaderUi);
-    connect(m_flasher.get(), &Flasher::isReadProtectionEnabled, this, &MainWindow::isReadProtectionEnabledUi);
-    connect(m_flasher.get(), &Flasher::readyToFlashId, this, [&] (void) { m_ui->loadFirmware->setEnabled(true); });
+    connect(m_flasher.get(), &flasher::Flasher::textInBrowser, this, [&] (const auto& text) { m_ui->textBrowser->append(text); });
+    connect(m_flasher.get(), &flasher::Flasher::isBootloader, this, &MainWindow::isBootloaderUi);
+    connect(m_flasher.get(), &flasher::Flasher::isReadProtectionEnabled, this, &MainWindow::isReadProtectionEnabledUi);
+    connect(m_flasher.get(), &flasher::Flasher::readyToFlashId, this, [&] (void) { m_ui->loadFirmware->setEnabled(true); });
 }
+
+MainWindow::~MainWindow() = default;
 
 void MainWindow::openSerialPortUi()
 {
@@ -166,7 +172,7 @@ void MainWindow::on_selectFirmware_clicked()
     m_flasher->init();
 
     m_flasher->setFilePath(filePath);
-    m_flasher->setState(FlasherStates::OPEN_FILE);
+    m_flasher->setState(flasher::FlasherStates::kOpenFile);
 }
 
 void MainWindow::on_loadFirmware_clicked()
@@ -174,13 +180,13 @@ void MainWindow::on_loadFirmware_clicked()
     if(m_isBootloader) {
         m_ui->loadFirmware->setEnabled(false);
         m_ui->progressBar->show();
-        m_flasher->setState(FlasherStates::FLASH);
+        m_flasher->setState(flasher::FlasherStates::kFlash);
     }
 }
 
 void MainWindow::on_registerButton_clicked()
 {
-    m_flasher->setState(FlasherStates::GET_BOARD_ID_KEY);
+    m_flasher->setState(flasher::FlasherStates::kGetBoardIdKey);
 }
 
 void MainWindow::on_enterBootloader_clicked()
@@ -243,3 +249,5 @@ bool MainWindow::showInfoMsg(const QString& title, const QString& description)
 
     return retVal;
 }
+
+} // namespace gui
