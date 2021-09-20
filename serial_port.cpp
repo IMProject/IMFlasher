@@ -33,23 +33,31 @@
  ****************************************************************************/
 
 #include "serial_port.h"
-#include <QDebug>
-#include <QSerialPortInfo>
-#include <QElapsedTimer>
 
-const char SerialPort::SOFTWARE_TYPE_CMD[14] = "software_type";
-const QString SerialPort::MANUFACT_IMBOOT = "IMBOOT";
-const QString SerialPort::MANUFACT_IMAPP = "IMAPP";
-const QString SerialPort::MANUFACT_MICROSOFT = "Microsoft";
-const QString SerialPort::SW_TYPE_IMBOOT = "IMBootloader";
-const QString SerialPort::SW_TYPE_IMAPP = "IMApplication";
+#include <QDebug>
+#include <QElapsedTimer>
+#include <QSerialPortInfo>
+
+namespace communication {
+namespace {
+
+constexpr int kTimerTimeoutInMs {20000};
+constexpr int kSerialTimeoutInMs {100};
+constexpr char kSoftwareTypeCmd[] = "software_type";
+constexpr char kManufactImBoot[] = "IMBOOT";
+constexpr char kManufactImApp[] = "IMAPP";
+constexpr char kManufactMicrosoft[] = "Microsoft";
+constexpr char kSwTypeImBoot[] = "IMBootloader";
+constexpr char kSwTypeImApp[] = "IMApplication";
+
+} // namespace
 
 SerialPort::SerialPort()
     : m_settings(std::make_unique<SettingsDialog>()),
       m_isOpen(false),
-      m_isBootlaoder(false)
-{
-}
+      m_isBootlaoder(false) {}
+
+SerialPort::~SerialPort() = default;
 
 void SerialPort::openConn()
 {
@@ -77,7 +85,7 @@ void SerialPort::openConnBlocking()
     while (!m_isOpen) {
         tryOpenPort();
 
-        if (timer.hasExpired(TIMER_TIMEOUT_IN_MS)) {
+        if (timer.hasExpired(kTimerTimeoutInMs)) {
             qInfo() << "Timeout";
             break;
         }
@@ -101,25 +109,25 @@ bool SerialPort::tryOpenPort()
    //Auto serching for connected USB
     bool success = false;
     m_settings->updateSettings();
-    m_port = m_settings->settings();
+    m_port = m_settings->GetCurrentSettings();
 
     const auto infos = QSerialPortInfo::availablePorts();
     for (const QSerialPortInfo &info : infos) {
         //We are supporting multiple different manufacturer names
         success = true;
 
-        if(MANUFACT_IMBOOT == info.manufacturer()) {
+        if (kManufactImBoot == info.manufacturer()) {
 
-            m_port.manufactNameEnum = ManufacturerName::IMBOOT;
+            m_port.manufactNameEnum = ManufacturerName::kImBoot;
             m_port.name = info.portName();
 
-        } else if(MANUFACT_IMAPP == info.manufacturer()) {
+        } else if (kManufactImApp == info.manufacturer()) {
 
-            m_port.manufactNameEnum = ManufacturerName::IMAPP;
+            m_port.manufactNameEnum = ManufacturerName::kImApp;
             m_port.name = info.portName();
 
-        } else if(MANUFACT_MICROSOFT == info.manufacturer()) {
-            m_port.manufactNameEnum = ManufacturerName::MICROSOFT;
+        } else if (kManufactMicrosoft == info.manufacturer()) {
+            m_port.manufactNameEnum = ManufacturerName::kMicrosoft;
             m_port.name = info.portName();
         } else {
             success = false;
@@ -153,16 +161,16 @@ bool SerialPort::tryOpenPort()
 bool SerialPort::detectBoard()
 {
     bool isBoardDetected;
-    write(SOFTWARE_TYPE_CMD, sizeof(SOFTWARE_TYPE_CMD));
-    waitForReadyRead(SERIAL_TIMEOUT_IN_MS);
+    write(kSoftwareTypeCmd, sizeof(kSoftwareTypeCmd));
+    waitForReadyRead(kSerialTimeoutInMs);
     QString softwareType = readAll();
 
-    if (softwareType == SW_TYPE_IMAPP) {
+    if (softwareType == kSwTypeImApp) {
         // We are in application
         m_isBootlaoder = false;
         isBoardDetected = true;
 
-    } else if (softwareType == SW_TYPE_IMBOOT) {
+    } else if (softwareType == kSwTypeImBoot) {
         m_isBootlaoder = true;
         isBoardDetected = true;
 
@@ -182,3 +190,5 @@ ManufacturerName SerialPort::getManufactName() const
 {
     return m_port.manufactNameEnum;
 }
+
+} // namespace communication

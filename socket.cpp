@@ -33,23 +33,28 @@
  ****************************************************************************/
 
 #include "socket.h"
+
+#include <QHostAddress>
 #include <QMessageAuthenticationCode>
 
-const QByteArray SocketClient::SHA_KEY_COMM = "NDQ4N2Y1YjFhZTg3ZGI3MTA1MjlhYmM3";
-const QHostAddress SocketClient::SERVER_ADDRESS = QHostAddress::LocalHost;
+namespace communication {
+namespace {
 
-SocketClient::SocketClient() :
-    m_tcpClient()
-{
-}
+constexpr quint16 kPort {5322};
+constexpr char kShaKey[] = "NDQ4N2Y1YjFhZTg3ZGI3MTA1MjlhYmM3";
 
-bool SocketClient::dataTransfer(QByteArray &inData, QByteArray &outData)
+} // namespace
+
+SocketClient::SocketClient() : m_tcpClient() {}
+SocketClient::~SocketClient() = default;
+
+bool SocketClient::DataTransfer(const QByteArray &inData, QByteArray &outData)
 {
     bool success = false;
     QMessageAuthenticationCode code(QCryptographicHash::Sha256);
-    code.setKey(SHA_KEY_COMM);
+    code.setKey(kShaKey);
 
-    m_tcpClient.connectToHost(SERVER_ADDRESS, PORT);
+    m_tcpClient.connectToHost(QHostAddress::LocalHost, kPort);
     success = m_tcpClient.waitForReadyRead();
     if(success) {
         QByteArray token = m_tcpClient.readAll();
@@ -75,3 +80,5 @@ bool SocketClient::dataTransfer(QByteArray &inData, QByteArray &outData)
 
     return success;
 }
+
+} // namespace communication

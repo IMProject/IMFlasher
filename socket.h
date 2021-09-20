@@ -35,23 +35,21 @@
 #ifndef SOCKET_H
 #define SOCKET_H
 
-#include <QTcpServer>
 #include <QTcpSocket>
+
+namespace communication {
 
 class SocketClient
 {
-
 public:
-    explicit SocketClient();
-    ~SocketClient() {}
+    SocketClient();
+    ~SocketClient();
 
-    bool dataTransfer(QByteArray &inData, QByteArray &outData);
+    bool DataTransfer(const QByteArray &inData, QByteArray &outData);
 
 private:
     QTcpSocket m_tcpClient;
-    static constexpr quint16 PORT {5322};
-    static const QByteArray SHA_KEY_COMM;
-    static const QHostAddress SERVER_ADDRESS;
 };
 
+} // namespace communication
 #endif // SOCKET_H

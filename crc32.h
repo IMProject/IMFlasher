@@ -35,13 +35,15 @@
 #ifndef CRC32_H
 #define CRC32_H
 
-#include "stdint.h"
+#include <cstdint>
 
-uint32_t CalculateCRC32(
-        const uint8_t *crc_DataPtr,
-        uint32_t crc_Length,
-        bool reflectedOutput,
-        bool reflectedInput
-        );
+namespace crc {
 
+uint32_t CalculateCrc32(
+        const uint8_t *crcDataPtr,
+        const uint32_t crcLength,
+        const bool reflectedOutput,
+        const bool reflectedInput);
+
+} // namespace crc
 #endif // CRC32_H

@@ -32,19 +32,19 @@
  *
  ****************************************************************************/
 
-#include "mainwindow.h"
+#include <QApplication>
+#include <QDebug>
+
 #include "flasher.h"
+#include "mainwindow.h"
 #include "serial_port.h"
 
-#include <QApplication>
-#include <QThread>
-#include <QDebug>
 
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
-    std::shared_ptr<Flasher> flasher = std::make_shared<Flasher>();
-    MainWindow window(flasher);
+    std::shared_ptr<flasher::Flasher> flasher = std::make_shared<flasher::Flasher>();
+    gui::MainWindow window(flasher);
 
     app.setWindowIcon(QIcon(":/images/capman.png"));
 
@@ -56,13 +56,14 @@ int main(int argc, char *argv[])
         //This is a blocking solution only for the console. No init needed.
         flasher->getSerialPort()->openConnBlocking();
 
-        ManufacturerName manufactName = flasher->getSerialPort()->getManufactName();
+        communication::ManufacturerName manufactName = flasher->getSerialPort()->getManufactName();
 
         if (!(flasher->getSerialPort()->isBootloaderDetected())) {
             flasher->sendFlashCommand();
             qInfo() << "Unplug USB run this app again and plug USB! ";
 
-        } else if ((manufactName == ManufacturerName::IMBOOT) || (manufactName == ManufacturerName::MICROSOFT)) {
+        } else if ((manufactName == communication::ManufacturerName::kImBoot) ||
+                   (manufactName == communication::ManufacturerName::kMicrosoft)) {
 
             if (flasher->collectBoardId()) {
 
