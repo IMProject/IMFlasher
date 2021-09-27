@@ -59,7 +59,6 @@ public:
     void showStatusMessage(const QString &message);
     void openSerialPortUi();
     void closeSerialPortUi();
-    bool showInfoMsg(const QString& title, const QString& description);
 
 private slots:
     void isBootloaderUi(const bool& bootloader);
@@ -78,7 +77,6 @@ private:
     std::shared_ptr<Ui::MainWindow> m_ui;
     std::shared_ptr<flasher::Flasher> m_flasher;
     bool m_isBootloader; // USB can be connected to bootloader or application
-    bool m_isOverRAM;    // If inside BL over RAM enable exit, over FLASH can't exit.
     bool m_isReadProtectionEnabled;  // Firmware is protected
 };
 

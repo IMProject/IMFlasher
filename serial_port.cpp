@@ -52,11 +52,7 @@ constexpr char kSwTypeImApp[] = "IMApplication";
 
 } // namespace
 
-SerialPort::SerialPort()
-    : m_settings(std::make_unique<SettingsDialog>()),
-      m_isOpen(false),
-      m_isBootlaoder(false) {}
-
+SerialPort::SerialPort() = default;
 SerialPort::~SerialPort() = default;
 
 void SerialPort::openConn()
@@ -108,8 +104,8 @@ bool SerialPort::tryOpenPort()
 {
    //Auto serching for connected USB
     bool success = false;
-    m_settings->updateSettings();
-    m_port = m_settings->GetCurrentSettings();
+    m_settings.updateSettings();
+    m_port = m_settings.GetCurrentSettings();
 
     const auto infos = QSerialPortInfo::availablePorts();
     for (const QSerialPortInfo &info : infos) {

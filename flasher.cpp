@@ -41,7 +41,6 @@
 
 #include "crc32.h"
 #include "serial_port.h"
-#include "socket.h"
 
 QT_BEGIN_NAMESPACE
 void Worker::doWork()
@@ -101,18 +100,7 @@ void ShowInfoMsg(const QString& title, const QString& description)
 
 Flasher::Flasher() :
         m_serialPort(std::make_shared<communication::SerialPort>()),
-        m_fileFirmware(std::make_unique<QFile>()),
-        m_keysFile(std::make_shared<QFile>()),
-        m_socketClient(std::make_unique<communication::SocketClient>()),
-        m_state(FlasherStates::kInit),
-        m_firmwareSize(0),
-        m_tryOpen(false),
-        m_isPortOpen(false),
-        m_isSecureBoot(true),
-        m_boardId(),
-        m_boardKey(),
-        m_jsonObject(),
-        m_isTryConnectStart(false)
+        m_keysFile(std::make_shared<QFile>())
 {
     const QString kKeyFileName = "keys.json";
     m_keysFile->setFileName(kKeyFileName);
@@ -171,7 +159,7 @@ void Flasher::loopHandler()
     switch (m_state) {
 
         case FlasherStates::kIdle:
-            if(m_fileFirmware->isOpen() && m_serialPort->isOpen()) {
+            if (m_fileFirmware.isOpen() && m_serialPort->isOpen()) {
                 emit readyToFlashId();
             }
             break;
@@ -315,7 +303,7 @@ void Flasher::loopHandler()
         case FlasherStates::kOpenFile:
             if(m_filePath.size() > 0) { //check if file path exist
                 openFirmwareFile(m_filePath);
-                if(m_fileFirmware->isOpen()) {
+                if (m_fileFirmware.isOpen()) {
                     QByteArray fileSize;
                     fileSize.setNum(m_firmwareSize);
                     emit textInBrowser("Board ID: " + m_boardId);
@@ -433,7 +421,7 @@ bool Flasher::getBoardKeyFromServer()
     QByteArray dataIn = QByteArray::fromHex(m_boardId.toUtf8());
 
     QByteArray dataOut;
-    success = m_socketClient->DataTransfer(dataIn, dataOut);
+    success = m_socketClient.DataTransfer(dataIn, dataOut);
     if(success) {
         m_boardKey = dataOut.toHex();
     }
@@ -483,10 +471,10 @@ std::tuple<bool, QString, QString> Flasher::startFlash()
     QString title = "Unknown";
     QString description = "Unknown";
     qint64 dataPosition = 0;
-    QByteArray byteArray = m_fileFirmware->readAll();
+    QByteArray byteArray = m_fileFirmware.readAll();
 
-    m_fileFirmware->close();
-    m_firmwareSize = m_fileFirmware->size() - kSignatureSize;
+    m_fileFirmware.close();
+    m_firmwareSize = m_fileFirmware.size() - kSignatureSize;
 
     char *ptrDataSignature = byteArray.data();
     char *ptrDataFirmware = byteArray.data() + kSignatureSize;
@@ -667,9 +655,9 @@ bool Flasher::checkTrue()
 
 bool Flasher::openFirmwareFile(const QString& filePath)
 {
-    m_fileFirmware->setFileName(filePath);
+    m_fileFirmware.setFileName(filePath);
 
-    return m_fileFirmware->open(QIODevice::ReadOnly);
+    return m_fileFirmware.open(QIODevice::ReadOnly);
 }
 
 void Flasher::setFilePath(const QString& filePath)
@@ -682,22 +670,15 @@ void Flasher::setState(const FlasherStates& state)
     m_state = state;
 }
 
-bool Flasher::sendEnterBootloaderCommand(void)
+bool Flasher::SendEnterBootloaderCommand()
 {
-    bool success;
     qInfo() << "Send enter bl command";
     m_serialPort->write(kEnterBlCmd, sizeof(kEnterBlCmd));
     m_serialPort->waitForReadyRead(kSerialTimeoutInMs);
-    success = checkAck();
-
-    if(success) {
-        QThread::msleep(400); //wait for restart
-    }
-
-    return success;
+    return checkAck();
 }
 
-bool Flasher::sendExitBootlaoderCommand(void)
+bool Flasher::SendExitBootloaderCommand()
 {
     qInfo() << "Send exit bl command";
     m_serialPort->write(kExitBlCmd, sizeof(kExitBlCmd));
@@ -742,6 +723,7 @@ bool Flasher::sendDisableFirmwareProtection(void)
 
 bool Flasher::sendDisconnectCmd()
 {
+    qInfo() << "Send disconnect command";
     m_serialPort->write(kDisconnectCmd, sizeof(kDisconnectCmd));
     m_serialPort->waitForReadyRead(kSerialTimeoutInMs);
     return checkAck();

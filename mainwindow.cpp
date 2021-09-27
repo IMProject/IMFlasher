@@ -42,6 +42,19 @@
 #include "flasher.h"
 
 namespace gui {
+namespace {
+
+bool ShowInfoMsg(const QString& title, const QString& description)
+{
+    QMessageBox msgBox;
+    msgBox.setText(title);
+    msgBox.setInformativeText(description);
+    msgBox.setStandardButtons(QMessageBox::Ok);
+    msgBox.addButton(QMessageBox::Cancel);
+    return (msgBox.exec() == QMessageBox::Ok);
+}
+
+} // namespace
 
 MainWindow::MainWindow(std::shared_ptr<flasher::Flasher> flasher, QWidget *parent) :
     QMainWindow(parent),
@@ -111,18 +124,15 @@ void MainWindow::isBootloaderUi(const bool& bootloader)
     m_isBootloader = bootloader;
 
     if(bootloader) {
-        m_ui->enterBootloader->setText("Exit bootlaoder");
+        m_ui->enterBootloader->setText("Exit bootloader");
         m_ui->loadFirmware->setEnabled(false);
         m_ui->selectFirmware->setEnabled(true);
         m_ui->protectButton->setEnabled(true);
         m_ui->registerButton->setEnabled(false);
-
-        if (m_isOverRAM) {
-            m_ui->enterBootloader->setEnabled(true);
-        }
+        m_ui->enterBootloader->setEnabled(true);
 
     } else {
-        m_ui->enterBootloader->setText("Enter bootlaoder");
+        m_ui->enterBootloader->setText("Enter bootloader");
         m_ui->enterBootloader->setEnabled(true);
         m_ui->loadFirmware->setEnabled(false);
         m_ui->selectFirmware->setEnabled(false);
@@ -191,20 +201,14 @@ void MainWindow::on_registerButton_clicked()
 
 void MainWindow::on_enterBootloader_clicked()
 {
-    if(m_isBootloader) {
-        bool success = m_flasher->sendExitBootlaoderCommand();
-        if(success) {
+    if (m_isBootloader) {
+        if (m_flasher->SendExitBootloaderCommand()) {
             isBootloaderUi(false);
         }
 
     } else {
-        bool success = m_flasher->sendEnterBootloaderCommand();
-
-        if(success) {
-            m_isOverRAM = true;
-        } else {
+        if (!m_flasher->SendEnterBootloaderCommand()) {
             m_flasher->sendFlashCommand();
-            m_isOverRAM = false;
         }
     }
 
@@ -214,15 +218,13 @@ void MainWindow::on_enterBootloader_clicked()
 void MainWindow::on_protectButton_clicked()
 {
     if(!m_isReadProtectionEnabled) {
-
-        bool success = m_flasher->sendEnableFirmwareProtection();
-        if(success) {
+        if (m_flasher->sendEnableFirmwareProtection()) {
             m_flasher->reopenSerialPort();
         }
 
     } else {
 
-        bool proceed = showInfoMsg("Disable read protection", "Once disabled, complete flash will be erased including bootloader!");
+        bool proceed = ShowInfoMsg("Disable read protection", "Once disabled, complete flash will be erased including bootloader!");
 
         if(proceed) {
             bool success = m_flasher->sendDisableFirmwareProtection();
@@ -231,23 +233,6 @@ void MainWindow::on_protectButton_clicked()
             }
         }
     }
-}
-
-bool MainWindow::showInfoMsg(const QString& title, const QString& description)
-{
-    bool retVal = false;
-    QMessageBox msgBox;
-    msgBox.setText(title);
-    msgBox.setInformativeText(description);
-    msgBox.setStandardButtons(QMessageBox::Ok);
-    msgBox.addButton(QMessageBox::Cancel);
-    if(msgBox.exec() == QMessageBox::Ok){
-      retVal = true;
-    }else {
-      // do something else
-    }
-
-    return retVal;
 }
 
 } // namespace gui
