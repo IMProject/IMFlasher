@@ -58,10 +58,10 @@ public:
     ManufacturerName getManufactName() const;
 
 private:
-    std::unique_ptr<SettingsDialog> m_settings;
-    bool m_isOpen;
+    SettingsDialog m_settings;
+    bool m_isOpen {false};
     SettingsDialog::Settings m_port;
-    bool m_isBootlaoder;
+    bool m_isBootlaoder {false};
 };
 
 } // namespace communication

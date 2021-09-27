@@ -40,14 +40,13 @@
 #include <QJsonObject>
 #include <QThread>
 
+#include "socket.h"
+
 namespace communication {
 class SerialPort;
-class SocketClient;
 } // namespace communication
 
 QT_BEGIN_NAMESPACE
-class QFile;
-
 class Worker : public QObject
 {
     Q_OBJECT
@@ -101,8 +100,8 @@ public:
     void reopenSerialPort();
     void setFilePath(const QString& filePath);
     void setState(const FlasherStates& state);
-    bool sendEnterBootloaderCommand(void); //enter in bootlaoder, no Falsh FW needed to exit
-    bool sendExitBootlaoderCommand(void);
+    bool SendEnterBootloaderCommand();
+    bool SendExitBootloaderCommand();
     void sendFlashCommand(void); //enter in bootlaoder, can't exit without FW flash
     bool checkIfFirmwareIsProtected(void);
     bool sendEnableFirmwareProtection(void);
@@ -129,20 +128,20 @@ public slots:
 private:
     QThread workerThread;
     std::shared_ptr<communication::SerialPort> m_serialPort;
-    std::unique_ptr<QFile> m_fileFirmware;
+    QFile m_fileFirmware;
     std::shared_ptr<QFile> m_keysFile;
-    std::unique_ptr<communication::SocketClient> m_socketClient;
+    communication::SocketClient m_socketClient;
 
-    FlasherStates m_state;
-    qint64 m_firmwareSize;
-    bool m_tryOpen;
-    bool m_isPortOpen;
-    bool m_isSecureBoot;
+    FlasherStates m_state {FlasherStates::kInit};
+    qint64 m_firmwareSize {0};
+    bool m_tryOpen {false};
+    bool m_isPortOpen {false};
+    bool m_isSecureBoot {true};
     QString m_boardId;
     QString m_boardKey;
     QJsonObject m_jsonObject;
     QString m_filePath;
-    bool m_isTryConnectStart;
+    bool m_isTryConnectStart {false};
     QElapsedTimer m_timerTryConnect;
 
     bool sendDisconnectCmd();
