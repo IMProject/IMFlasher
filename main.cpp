@@ -56,14 +56,11 @@ int main(int argc, char *argv[])
         //This is a blocking solution only for the console. No init needed.
         flasher->getSerialPort()->openConnBlocking();
 
-        communication::ManufacturerName manufactName = flasher->getSerialPort()->getManufactName();
-
         if (!(flasher->getSerialPort()->isBootloaderDetected())) {
             flasher->sendFlashCommand();
             qInfo() << "Unplug USB run this app again and plug USB! ";
 
-        } else if ((manufactName == communication::ManufacturerName::kImBoot) ||
-                   (manufactName == communication::ManufacturerName::kMicrosoft)) {
+        } else {
 
             if (flasher->collectBoardId()) {
 
@@ -101,8 +98,6 @@ int main(int argc, char *argv[])
                 }
             }
 
-        } else {
-            qInfo() << "Wrong board connected!";
         }
 
     //Run GUI solution
