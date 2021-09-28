@@ -71,7 +71,8 @@ enum class FlasherStates {
     kGetBoardIdKey,
     kBoardCheckRegistration,
     kOpenFile,
-    kFlash
+    kFlash,
+    kEnterExitBootloader
 };
 
 class Flasher : public QObject
@@ -102,7 +103,7 @@ public:
     void setState(const FlasherStates& state);
     bool SendEnterBootloaderCommand();
     bool SendExitBootloaderCommand();
-    void sendFlashCommand(void); //enter in bootlaoder, can't exit without FW flash
+    void SendFlashCommand(void); //enter in bootlaoder, can't exit without FW flash
     bool checkIfFirmwareIsProtected(void);
     bool sendEnableFirmwareProtection(void);
     bool sendDisableFirmwareProtection(void);
