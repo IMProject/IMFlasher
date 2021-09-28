@@ -201,18 +201,7 @@ void MainWindow::on_registerButton_clicked()
 
 void MainWindow::on_enterBootloader_clicked()
 {
-    if (m_isBootloader) {
-        if (m_flasher->SendExitBootloaderCommand()) {
-            isBootloaderUi(false);
-        }
-
-    } else {
-        if (!m_flasher->SendEnterBootloaderCommand()) {
-            m_flasher->sendFlashCommand();
-        }
-    }
-
-    m_flasher->reopenSerialPort();
+    m_flasher->setState(flasher::FlasherStates::kEnterExitBootloader);
 }
 
 void MainWindow::on_protectButton_clicked()

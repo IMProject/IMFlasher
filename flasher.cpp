@@ -329,6 +329,22 @@ void Flasher::loopHandler()
             break;
         }
 
+        case FlasherStates::kEnterExitBootloader:
+        {
+            if (m_serialPort->isBootloaderDetected()) {
+                if (SendExitBootloaderCommand()) {
+                    emit isBootloader(false);
+                }
+
+            } else {
+                if (!SendEnterBootloaderCommand()) {
+                    SendFlashCommand();
+                }
+            }
+
+            reopenSerialPort();
+        }
+
         default:
             break;
     }
@@ -686,7 +702,7 @@ bool Flasher::SendExitBootloaderCommand()
     return checkAck();
 }
 
-void Flasher::sendFlashCommand(void)
+void Flasher::SendFlashCommand(void)
 {
     qInfo() << "Send flash command";
     m_serialPort->write(kFlashFwCmd, sizeof(kFlashFwCmd));

@@ -57,7 +57,7 @@ int main(int argc, char *argv[])
         flasher->getSerialPort()->openConnBlocking();
 
         if (!(flasher->getSerialPort()->isBootloaderDetected())) {
-            flasher->sendFlashCommand();
+            flasher->SendFlashCommand();
             qInfo() << "Unplug USB run this app again and plug USB! ";
 
         } else {
