@@ -10,7 +10,6 @@ SOURCES += \
     main.cpp \
     mainwindow.cpp \
     serial_port.cpp \
-    settingsdialog.cpp \
     socket.cpp
 
 HEADERS += \
@@ -18,12 +17,10 @@ HEADERS += \
     flasher.h \
     mainwindow.h \
     serial_port.h \
-    settingsdialog.h \
     socket.h
 
 FORMS += \
-    mainwindow.ui \
-    settingsdialog.ui
+    mainwindow.ui
 
 RESOURCES += \
     imflasher.qrc

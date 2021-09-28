@@ -57,14 +57,14 @@ SerialPort::~SerialPort() = default;
 
 void SerialPort::openConn()
 {
-    if(m_isOpen == false) {
-        setPortName(m_port.name);
-        setBaudRate(m_port.baudRate);
-        setDataBits(m_port.dataBits);
-        setParity(m_port.parity);
+    if((m_isOpen == false) && !m_portName.isEmpty()) {
+        setPortName(m_portName);
+        setBaudRate(QSerialPort::Baud115200);
+        setDataBits(QSerialPort::Data8);
+        setParity(QSerialPort::NoParity);
 
-        setStopBits(m_port.stopBits);
-        setFlowControl(m_port.flowControl);
+        setStopBits(QSerialPort::OneStop);
+        setFlowControl(QSerialPort::NoFlowControl);
         if (open(QIODevice::ReadWrite)) {
             m_isOpen = true;
         } else {
@@ -104,48 +104,21 @@ bool SerialPort::tryOpenPort()
 {
    //Auto serching for connected USB
     bool success = false;
-    m_settings.updateSettings();
-    m_port = m_settings.GetCurrentSettings();
 
     const auto infos = QSerialPortInfo::availablePorts();
     for (const QSerialPortInfo &info : infos) {
-        //We are supporting multiple different manufacturer names
-        success = true;
 
-        if (kManufactImBoot == info.manufacturer()) {
+        m_portName = info.portName();
 
-            m_port.manufactNameEnum = ManufacturerName::kImBoot;
-            m_port.name = info.portName();
+        openConn();
 
-        } else if (kManufactImApp == info.manufacturer()) {
+        if (m_isOpen) {
 
-            m_port.manufactNameEnum = ManufacturerName::kImApp;
-            m_port.name = info.portName();
+            if (detectBoard()) {
+                success = true;
+                break;
 
-        } else if (kManufactMicrosoft == info.manufacturer()) {
-            m_port.manufactNameEnum = ManufacturerName::kMicrosoft;
-            m_port.name = info.portName();
-        } else {
-            success = false;
-        }
-
-        if(success) {
-            openConn();
-
-            if (m_isOpen) {
-
-                // For Microsoft, we can't be sure if we are connected to the proper board so we need to check this.
-                if (detectBoard()) {
-                    // we are connected to proper board, exit for loop
-                    break;
-
-                } else {
-                    closeConn();
-                }
-            }
-
-        } else {
-            if(m_isOpen) {
+            } else {
                 closeConn();
             }
         }
@@ -180,11 +153,6 @@ bool SerialPort::detectBoard()
 bool SerialPort::isBootloaderDetected() const
 {
     return m_isBootlaoder;
-}
-
-ManufacturerName SerialPort::getManufactName() const
-{
-    return m_port.manufactNameEnum;
 }
 
 } // namespace communication

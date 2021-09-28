@@ -37,8 +37,6 @@
 
 #include <QSerialPort>
 
-#include "settingsdialog.h"
-
 namespace communication {
 
 class SerialPort : public QSerialPort
@@ -55,13 +53,11 @@ public:
     bool tryOpenPort();
     bool detectBoard();
     bool isBootloaderDetected() const;
-    ManufacturerName getManufactName() const;
 
 private:
-    SettingsDialog m_settings;
-    bool m_isOpen {false};
-    SettingsDialog::Settings m_port;
     bool m_isBootlaoder {false};
+    bool m_isOpen {false};
+    QString m_portName;
 };
 
 } // namespace communication
