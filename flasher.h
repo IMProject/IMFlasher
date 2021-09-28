@@ -70,9 +70,14 @@ enum class FlasherStates {
     kBoardId,
     kGetBoardIdKey,
     kBoardCheckRegistration,
-    kOpenFile,
+    kFirmwareSelected,
     kFlash,
     kEnterExitBootloader
+};
+
+enum class FlasherActions {
+    kNoAction,
+    kSelectFirmware
 };
 
 class Flasher : public QObject
@@ -99,16 +104,13 @@ public:
     void openSerialPort();
     void closeSerialPort();
     void reopenSerialPort();
-    void setFilePath(const QString& filePath);
     void setState(const FlasherStates& state);
-    bool SendEnterBootloaderCommand();
-    bool SendExitBootloaderCommand();
-    void SendFlashCommand(void); //enter in bootlaoder, can't exit without FW flash
+    void SetAction(const FlasherActions& action);
+    void SendFlashCommand();
     bool checkIfFirmwareIsProtected(void);
     bool sendEnableFirmwareProtection(void);
     bool sendDisableFirmwareProtection(void);
     void getVersion(void);
-    QThread& getWorkerThread();
 
 signals:
     void updateProgress(const qint64& dataPosition, const qint64& firmwareSize);
@@ -134,6 +136,7 @@ private:
     communication::SocketClient m_socketClient;
 
     FlasherStates m_state {FlasherStates::kInit};
+    FlasherActions m_action {FlasherActions::kNoAction};
     qint64 m_firmwareSize {0};
     bool m_tryOpen {false};
     bool m_isPortOpen {false};
@@ -145,7 +148,10 @@ private:
     bool m_isTryConnectStart {false};
     QElapsedTimer m_timerTryConnect;
 
-    bool sendDisconnectCmd();
+    bool SendDisconnectCmd();
+    bool SendEnterBootloaderCommand();
+    bool SendExitBootloaderCommand();
+    void SetFilePath(const QString& filePath);
 };
 
 } // namespace flasher

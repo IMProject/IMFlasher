@@ -35,7 +35,6 @@
 #include "mainwindow.h"
 
 #include <QDebug>
-#include <QFileDialog>
 #include <QMessageBox>
 
 #include "ui_mainwindow.h"
@@ -173,16 +172,7 @@ void MainWindow::showStatusMessage(const QString &message)
 
 void MainWindow::on_selectFirmware_clicked()
 {
-    m_flasher->getWorkerThread().quit();
-
-    QString filePath = QFileDialog::getOpenFileName(this,
-            tr("Flight control binary"), "",
-            tr("Binary (*.bin);;All Files (*)"));
-
-    m_flasher->init();
-
-    m_flasher->setFilePath(filePath);
-    m_flasher->setState(flasher::FlasherStates::kOpenFile);
+    m_flasher->SetAction(flasher::FlasherActions::kSelectFirmware);
 }
 
 void MainWindow::on_loadFirmware_clicked()
