@@ -36,6 +36,7 @@
 
 #include <QDebug>
 #include <QFile>
+#include <QFileDialog>
 #include <QJsonDocument>
 #include <QMessageBox>
 
@@ -156,6 +157,28 @@ void Flasher::loopHandler()
 {
     bool success;
 
+    switch (m_action) {
+    case FlasherActions::kSelectFirmware:
+    {
+        QString filePath = QFileDialog::getOpenFileName(nullptr,
+                                                        tr("Firmware binary"),
+                                                        "",
+                                                        tr("Binary (*.bin);;All Files (*)"));
+
+        if (!filePath.isEmpty()) {
+            SetFilePath(filePath);
+            setState(flasher::FlasherStates::kFirmwareSelected);
+        }
+
+        SetAction(FlasherActions::kNoAction);
+
+        break;
+    }
+    default:
+        // No action
+        break;
+    }
+
     switch (m_state) {
 
         case FlasherStates::kIdle:
@@ -235,7 +258,7 @@ void Flasher::loopHandler()
             if (m_serialPort->isOpen()) {
 
                 if (m_serialPort->isBootloaderDetected()) {
-                    isDisconnectedSuccess = this->sendDisconnectCmd();
+                    isDisconnectedSuccess = SendDisconnectCmd();
                 }
 
                 m_serialPort->closeConn();
@@ -300,17 +323,13 @@ void Flasher::loopHandler()
             this->setState(FlasherStates::kIdle);
             break;
 
-        case FlasherStates::kOpenFile:
-            if(m_filePath.size() > 0) { //check if file path exist
-                openFirmwareFile(m_filePath);
-                if (m_fileFirmware.isOpen()) {
-                    QByteArray fileSize;
-                    fileSize.setNum(m_firmwareSize);
-                    emit textInBrowser("Board ID: " + m_boardId);
-                }
+        case FlasherStates::kFirmwareSelected:
+            openFirmwareFile(m_filePath);
+            if (m_fileFirmware.isOpen()) {
+                emit textInBrowser("Board ID: " + m_boardId);
             }
 
-            this->setState(FlasherStates::kIdle);
+            setState(FlasherStates::kIdle);
             break;
 
         case FlasherStates::kFlash:
@@ -676,7 +695,7 @@ bool Flasher::openFirmwareFile(const QString& filePath)
     return m_fileFirmware.open(QIODevice::ReadOnly);
 }
 
-void Flasher::setFilePath(const QString& filePath)
+void Flasher::SetFilePath(const QString& filePath)
 {
     m_filePath = filePath;
 }
@@ -684,6 +703,11 @@ void Flasher::setFilePath(const QString& filePath)
 void Flasher::setState(const FlasherStates& state)
 {
     m_state = state;
+}
+
+void Flasher::SetAction(const FlasherActions& action)
+{
+    m_action = action;
 }
 
 bool Flasher::SendEnterBootloaderCommand()
@@ -698,6 +722,14 @@ bool Flasher::SendExitBootloaderCommand()
 {
     qInfo() << "Send exit bl command";
     m_serialPort->write(kExitBlCmd, sizeof(kExitBlCmd));
+    m_serialPort->waitForReadyRead(kSerialTimeoutInMs);
+    return checkAck();
+}
+
+bool Flasher::SendDisconnectCmd()
+{
+    qInfo() << "Send disconnect command";
+    m_serialPort->write(kDisconnectCmd, sizeof(kDisconnectCmd));
     m_serialPort->waitForReadyRead(kSerialTimeoutInMs);
     return checkAck();
 }
@@ -737,25 +769,12 @@ bool Flasher::sendDisableFirmwareProtection(void)
     return checkAck();
 }
 
-bool Flasher::sendDisconnectCmd()
-{
-    qInfo() << "Send disconnect command";
-    m_serialPort->write(kDisconnectCmd, sizeof(kDisconnectCmd));
-    m_serialPort->waitForReadyRead(kSerialTimeoutInMs);
-    return checkAck();
-}
-
 void Flasher::getVersion(void)
 {
     m_serialPort->write(kVersionCmd, sizeof(kVersionCmd));
     m_serialPort->waitForReadyRead(kSerialTimeoutInMs);
     QString gitVersion = m_serialPort->readAll();
     emit textInBrowser(gitVersion);
-}
-
-QThread& Flasher::getWorkerThread()
-{
-    return workerThread;
 }
 
 } // namespace flasher
