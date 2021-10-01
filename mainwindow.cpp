@@ -99,7 +99,7 @@ MainWindow::MainWindow(std::shared_ptr<flasher::Flasher> flasher, QWidget *paren
     connect(m_flasher.get(), &flasher::Flasher::textInBrowser, this, [&] (const auto& text) { m_ui->textBrowser->append(text); });
     connect(m_flasher.get(), &flasher::Flasher::isBootloader, this, &MainWindow::isBootloaderUi);
     connect(m_flasher.get(), &flasher::Flasher::isReadProtectionEnabled, this, &MainWindow::isReadProtectionEnabledUi);
-    connect(m_flasher.get(), &flasher::Flasher::readyToFlashId, this, [&] (void) { m_ui->loadFirmware->setEnabled(true); });
+    connect(m_flasher.get(), &flasher::Flasher::enableLoadButton, this, [&] (void) { m_ui->loadFirmware->setEnabled(true); });
 }
 
 MainWindow::~MainWindow() = default;
@@ -108,14 +108,14 @@ void MainWindow::openSerialPortUi()
 {
     m_ui->actionConnect->setEnabled(false);
     m_ui->actionDisconnect->setEnabled(true);
-    m_flasher->openSerialPort();
+    m_flasher->SetState(flasher::FlasherStates::kTryToConnect);;
 }
 
 void MainWindow::closeSerialPortUi()
 {
     m_ui->actionConnect->setEnabled(true);
     m_ui->actionDisconnect->setEnabled(false);
-    m_flasher->closeSerialPort();
+    m_flasher->SetState(flasher::FlasherStates::kDisconnected);
 }
 
 void MainWindow::isBootloaderUi(const bool& bootloader)
@@ -180,25 +180,30 @@ void MainWindow::on_loadFirmware_clicked()
     if(m_isBootloader) {
         m_ui->loadFirmware->setEnabled(false);
         m_ui->progressBar->show();
-        m_flasher->setState(flasher::FlasherStates::kFlash);
+        m_flasher->SetState(flasher::FlasherStates::kFlash);
     }
 }
 
 void MainWindow::on_registerButton_clicked()
 {
-    m_flasher->setState(flasher::FlasherStates::kGetBoardIdKey);
+    m_flasher->SetState(flasher::FlasherStates::kGetBoardIdKey);
 }
 
 void MainWindow::on_enterBootloader_clicked()
 {
-    m_flasher->setState(flasher::FlasherStates::kEnterExitBootloader);
+    if (m_isBootloader) {
+        m_flasher->SetAction(flasher::FlasherActions::kExitBootloader);
+    }
+    else {
+        m_flasher->SetAction(flasher::FlasherActions::kEnterBootloader);
+    }
 }
 
 void MainWindow::on_protectButton_clicked()
 {
     if(!m_isReadProtectionEnabled) {
         if (m_flasher->sendEnableFirmwareProtection()) {
-            m_flasher->reopenSerialPort();
+            m_flasher->SetState(flasher::FlasherStates::kReconnect);
         }
 
     } else {

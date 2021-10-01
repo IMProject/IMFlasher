@@ -62,9 +62,9 @@ int main(int argc, char *argv[])
 
         } else {
 
-            if (flasher->collectBoardId()) {
+            if (flasher->CollectBoardId()) {
 
-                if (flasher->getBoardKey()) {
+                if (flasher->GetBoardKey()) {
 
                     if (0 == QString::compare("erase", actionString, Qt::CaseInsensitive)) {
 
@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
 
                     } else if (0 == QString::compare("flash", actionString, Qt::CaseInsensitive)) {
 
-                        if (flasher->openFirmwareFile(filePath)) {
+                        if (flasher->OpenFirmwareFile(filePath)) {
 
                             std::tuple<bool, QString, QString> flashingInfo = flasher->startFlash();
 

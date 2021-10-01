@@ -44,9 +44,6 @@ namespace {
 constexpr int kTimerTimeoutInMs {20000};
 constexpr int kSerialTimeoutInMs {100};
 constexpr char kSoftwareTypeCmd[] = "software_type";
-constexpr char kManufactImBoot[] = "IMBOOT";
-constexpr char kManufactImApp[] = "IMAPP";
-constexpr char kManufactMicrosoft[] = "Microsoft";
 constexpr char kSwTypeImBoot[] = "IMBootloader";
 constexpr char kSwTypeImApp[] = "IMApplication";
 
