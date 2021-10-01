@@ -99,16 +99,14 @@ void ShowInfoMsg(const QString& title, const QString& description)
 
 } // namespace
 
-Flasher::Flasher() :
-        m_serialPort(std::make_shared<communication::SerialPort>()),
-        m_keysFile(std::make_shared<QFile>())
+Flasher::Flasher() : m_serialPort(std::make_shared<communication::SerialPort>())
 {
     const QString kKeyFileName = "keys.json";
-    m_keysFile->setFileName(kKeyFileName);
-    m_keysFile->open(QIODevice::ReadWrite);
-    if(m_keysFile->isOpen()) {
-        QString keysJson = m_keysFile->readAll();
-        m_keysFile->close();
+    m_keysFile.setFileName(kKeyFileName);
+    m_keysFile.open(QIODevice::ReadWrite);
+    if(m_keysFile.isOpen()) {
+        QString keysJson = m_keysFile.readAll();
+        m_keysFile.close();
 
         QJsonDocument jsonData = QJsonDocument::fromJson(keysJson.toUtf8());
         if(!jsonData.isEmpty()) {
@@ -134,30 +132,64 @@ void Flasher::init()
     emit runLoop();
 }
 
-void Flasher::openSerialPort()
-{
-    this->setState(FlasherStates::kTryToConnect);
-    m_tryOpen = true;
-}
-
-void Flasher::closeSerialPort()
-{
-    this->setState(FlasherStates::kDisconnected);
-    m_tryOpen = false;
-}
-
-void Flasher::reopenSerialPort()
-{
-    closeSerialPort();
-    QThread::msleep(400);
-    openSerialPort();
-}
-
 void Flasher::loopHandler()
 {
     bool success;
 
     switch (m_action) {
+
+    case FlasherActions::kCheckBoardRegistration:
+    {
+        if (GetBoardKey()) {
+            emit textInBrowser("Board verified!");
+        }
+        else {
+            emit textInBrowser("Board is not registered! Press the register button");
+        }
+
+        emit isReadProtectionEnabled(IsFirmwareProtected());
+
+        SetState(FlasherStates::kIdle);
+        SetAction(FlasherActions::kNoAction);
+        break;
+    }
+    case FlasherActions::kEnterBootloader:
+    {
+        if (!SendEnterBootloaderCommand()) {
+            SendFlashCommand();
+        }
+
+        SetState(FlasherStates::kReconnect);
+        SetAction(FlasherActions::kNoAction);
+        break;
+    }
+    case FlasherActions::kExitBootloader:
+    {
+        if (SendExitBootloaderCommand()) {
+            SetState(FlasherStates::kReconnect);
+            emit isBootloader(false);
+        }
+        else {
+            SetState(FlasherStates::kError);
+        }
+
+        SetAction(FlasherActions::kNoAction);
+        break;
+    }
+    case FlasherActions::kGetBoardId:
+    {
+        if (CollectBoardId()) {
+            emit textInBrowser("Board ID: " + m_boardId);
+            SetAction(FlasherActions::kCheckBoardRegistration);
+        }
+        else {
+            emit textInBrowser("Board ID Error. Unplug your board, press disconnect/connect, and plug your board again.");
+            SetState(FlasherStates::kError);
+            SetAction(FlasherActions::kNoAction);
+        }
+
+        break;
+    }
     case FlasherActions::kSelectFirmware:
     {
         QString filePath = QFileDialog::getOpenFileName(nullptr,
@@ -167,11 +199,15 @@ void Flasher::loopHandler()
 
         if (!filePath.isEmpty()) {
             SetFilePath(filePath);
-            setState(flasher::FlasherStates::kFirmwareSelected);
+            OpenFirmwareFile(m_filePath);
+            if (m_fileFirmware.isOpen()) {
+                emit textInBrowser("Firmware: " + m_filePath);
+                emit enableLoadButton();
+            }
         }
 
+        SetState(FlasherStates::kIdle);
         SetAction(FlasherActions::kNoAction);
-
         break;
     }
     default:
@@ -182,20 +218,7 @@ void Flasher::loopHandler()
     switch (m_state) {
 
         case FlasherStates::kIdle:
-            if (m_fileFirmware.isOpen() && m_serialPort->isOpen()) {
-                emit readyToFlashId();
-            }
-            break;
-
-        case FlasherStates::kInit:
-
-            if (m_tryOpen) {
-
-                if (!(m_serialPort->tryOpenPort())) {
-                    this->setState(FlasherStates::kTryToConnect);
-                }
-            }
-
+            // Idle state
             break;
 
         case FlasherStates::kTryToConnect:
@@ -207,7 +230,7 @@ void Flasher::loopHandler()
                 if (m_serialPort->tryOpenPort()) {
 
                     if (m_serialPort->isOpen()) {
-                        this->setState(FlasherStates::kConnected);
+                        SetState(FlasherStates::kConnected);
                         m_isTryConnectStart = false;
                         isConnected = true;
 
@@ -221,8 +244,7 @@ void Flasher::loopHandler()
 
                 if ((!isConnected) && (m_timerTryConnect.hasExpired(kTryToConnectTimeoutInMs))) {
                     emit failedToConnect();
-                    this->setState(FlasherStates::kInit);
-                    m_tryOpen = false;
+                    SetState(FlasherStates::kIdle);
                     m_isTryConnectStart = false;
                 }
 
@@ -240,13 +262,15 @@ void Flasher::loopHandler()
             if(m_serialPort->isOpen()) {
                 getVersion();
 
-                if(m_serialPort->isBootloaderDetected()) {
+                if (m_serialPort->isBootloaderDetected()) {
                     emit isBootloader(true);
-                    this->setState(FlasherStates::kBoardId);
-                } else {
-                    emit isBootloader(false);
-                    this->setState(FlasherStates::kIdle);
+                    SetAction(FlasherActions::kGetBoardId);
                 }
+                else {
+                    emit isBootloader(false);
+                }
+
+                SetState(FlasherStates::kIdle);
             }
             break;
 
@@ -271,37 +295,10 @@ void Flasher::loopHandler()
                 emit showStatusMsg("Unplug board!");
             }
 
-            this->setState(FlasherStates::kIdle);
+            SetState(FlasherStates::kIdle);
 
             break;
         }
-
-        case FlasherStates::kBoardId:
-
-            success = collectBoardId();
-            if(success) {
-                emit textInBrowser("Board ID: " + m_boardId);
-                this->setState(FlasherStates::kBoardCheckRegistration);
-            } else {
-                emit textInBrowser("Board ID Error. Unplug your board, press disconnect/connect, and plug your board again.");
-                this->setState(FlasherStates::kInit);
-            }
-
-            break;
-
-        case FlasherStates::kBoardCheckRegistration:
-            success = getBoardKey();
-            if(success) {
-                emit textInBrowser("Board verified!");
-            } else {
-                emit textInBrowser("Board is not registered! Press the register button");
-            }
-
-            emit isReadProtectionEnabled(checkIfFirmwareIsProtected());
-
-            this->setState(FlasherStates::kIdle);
-
-            break;
 
         case FlasherStates::kGetBoardIdKey:
             if(m_boardId.size() != kBoardIdSizeString) {
@@ -320,16 +317,7 @@ void Flasher::loopHandler()
                 }
             }
 
-            this->setState(FlasherStates::kIdle);
-            break;
-
-        case FlasherStates::kFirmwareSelected:
-            openFirmwareFile(m_filePath);
-            if (m_fileFirmware.isOpen()) {
-                emit textInBrowser("Board ID: " + m_boardId);
-            }
-
-            setState(FlasherStates::kIdle);
+            SetState(FlasherStates::kIdle);
             break;
 
         case FlasherStates::kFlash:
@@ -340,29 +328,29 @@ void Flasher::loopHandler()
 
             if (std::get<0>(flashingInfo)) {
                 m_serialPort->closeConn();
-                this->setState(FlasherStates::kTryToConnect);
+                SetState(FlasherStates::kTryToConnect);
 
             } else {
-                this->setState(FlasherStates::kIdle);
+                SetState(FlasherStates::kError);
             }
             break;
         }
 
-        case FlasherStates::kEnterExitBootloader:
+        case FlasherStates::kReconnect:
         {
-            if (m_serialPort->isBootloaderDetected()) {
-                if (SendExitBootloaderCommand()) {
-                    emit isBootloader(false);
-                }
-
-            } else {
-                if (!SendEnterBootloaderCommand()) {
-                    SendFlashCommand();
-                }
+            if (m_serialPort->isOpen()) {
+                m_serialPort->closeConn();
+            }
+            else {
+                SetState(FlasherStates::kTryToConnect);
             }
 
-            reopenSerialPort();
+            break;
         }
+
+        case FlasherStates::kError:
+            // Error
+            break;
 
         default:
             break;
@@ -377,69 +365,10 @@ std::shared_ptr<communication::SerialPort> Flasher::getSerialPort() const
     return m_serialPort;
 }
 
-bool Flasher::collectBoardId()
-{
-    bool success = false;
-
-    if (m_serialPort->isOpen()) {
-        m_serialPort->write(kBoardIdCmd, sizeof(kBoardIdCmd));
-        m_serialPort->waitForReadyRead(kCollectBoardIdSerialTimeoutInMs);
-        QByteArray data = m_serialPort->readAll();
-        QByteArray boardId;
-        QByteArray dataCrc;
-        uint32_t crc;
-
-        boardId = data.left(kBoardIdSize);
-        dataCrc = data.right(kCrc32Size);
-        Deserialize32((uint8_t*)dataCrc.data(), &crc);
-
-        uint32_t calcCrc = crc::CalculateCrc32((uint8_t*)boardId.data(), static_cast<uint32_t>(kBoardIdSize), false, false);
-
-        if((boardId.size() == kBoardIdSize) && (calcCrc == crc)) {
-            qInfo() << "BOARD ID";
-            m_boardId = boardId.toHex();
-            qInfo() << m_boardId;
-            success = true;
-        } else {
-            qInfo() << "Board id error";
-        }
-    }
-
-    return success;
-}
-
-bool Flasher::getBoardKey()
-{
-    bool success = false;
-    const QByteArray kNotSecuredMagicString = "NOT_SECURED_MAGIC_STRING_1234567";
-
-    //Skip security
-    QByteArray magic_string = kNotSecuredMagicString;
-    if (m_boardId != magic_string.toHex()) {
-
-        QJsonValue boardKey = m_jsonObject.value(m_boardId);
-        m_boardKey = boardKey.toString();
-
-        if (m_boardKey.size() == kKeySizeString) {
-
-            success = true;
-
-        } else {
-            qInfo() << "Board key error";
-        }
-
-    } else {
-        m_isSecureBoot = false;
-        success = true;
-    }
-
-    return success;
-}
-
 void Flasher::saveBoardKeyToFile()
 {
-    QTextStream streamConfigFile(m_keysFile.get());
-    m_keysFile->open(QIODevice::ReadWrite);
+    QTextStream streamConfigFile(&m_keysFile);
+    m_keysFile.open(QIODevice::ReadWrite);
 
     QJsonDocument jsonData;
     m_jsonObject.insert(m_boardId, m_boardKey);
@@ -447,7 +376,7 @@ void Flasher::saveBoardKeyToFile()
     jsonData.setObject(m_jsonObject);
 
     streamConfigFile << jsonData.toJson();
-    m_keysFile->close();
+    m_keysFile.close();
 }
 
 bool Flasher::getBoardKeyFromServer()
@@ -688,26 +617,82 @@ bool Flasher::checkTrue()
     return success;
 }
 
-bool Flasher::openFirmwareFile(const QString& filePath)
+bool Flasher::CollectBoardId()
+{
+    bool success = false;
+
+    if (m_serialPort->isOpen()) {
+        m_serialPort->write(kBoardIdCmd, sizeof(kBoardIdCmd));
+        m_serialPort->waitForReadyRead(kCollectBoardIdSerialTimeoutInMs);
+        QByteArray data = m_serialPort->readAll();
+        QByteArray boardId;
+        QByteArray dataCrc;
+        uint32_t crc;
+
+        boardId = data.left(kBoardIdSize);
+        dataCrc = data.right(kCrc32Size);
+        Deserialize32((uint8_t*)dataCrc.data(), &crc);
+
+        uint32_t calcCrc = crc::CalculateCrc32((uint8_t*)boardId.data(), static_cast<uint32_t>(kBoardIdSize), false, false);
+
+        if ((boardId.size() == kBoardIdSize) && (calcCrc == crc)) {
+            m_boardId = boardId.toHex();
+            qInfo() << "Board ID: " << m_boardId;
+            success = true;
+        }
+        else {
+            qInfo() << "Board id error";
+        }
+    }
+
+    return success;
+}
+
+bool Flasher::GetBoardKey()
+{
+    bool success;
+    const QByteArray magic_string = "NOT_SECURED_MAGIC_STRING_1234567";
+
+    if (m_boardId != magic_string.toHex()) {
+        m_boardKey = m_jsonObject.value(m_boardId).toString();
+
+        if (m_boardKey.size() == kKeySizeString) {
+            success = true;
+        }
+        else {
+            success = false;
+            qInfo() << "Board key error";
+        }
+
+    } else {
+        m_isSecureBoot = false;
+        success = true;
+    }
+
+    return success;
+}
+
+bool Flasher::IsFirmwareProtected()
+{
+    qInfo() << "Send is firmware protected command";
+    m_serialPort->write(kIsFwProtectedCmd, sizeof(kIsFwProtectedCmd));
+    m_serialPort->waitForReadyRead(kSerialTimeoutInMs);
+    return checkTrue();
+}
+
+bool Flasher::OpenFirmwareFile(const QString& filePath)
 {
     m_fileFirmware.setFileName(filePath);
 
     return m_fileFirmware.open(QIODevice::ReadOnly);
 }
 
-void Flasher::SetFilePath(const QString& filePath)
+bool Flasher::SendDisconnectCmd()
 {
-    m_filePath = filePath;
-}
-
-void Flasher::setState(const FlasherStates& state)
-{
-    m_state = state;
-}
-
-void Flasher::SetAction(const FlasherActions& action)
-{
-    m_action = action;
+    qInfo() << "Send disconnect command";
+    m_serialPort->write(kDisconnectCmd, sizeof(kDisconnectCmd));
+    m_serialPort->waitForReadyRead(kSerialTimeoutInMs);
+    return checkAck();
 }
 
 bool Flasher::SendEnterBootloaderCommand()
@@ -726,28 +711,26 @@ bool Flasher::SendExitBootloaderCommand()
     return checkAck();
 }
 
-bool Flasher::SendDisconnectCmd()
-{
-    qInfo() << "Send disconnect command";
-    m_serialPort->write(kDisconnectCmd, sizeof(kDisconnectCmd));
-    m_serialPort->waitForReadyRead(kSerialTimeoutInMs);
-    return checkAck();
-}
-
-void Flasher::SendFlashCommand(void)
+void Flasher::SendFlashCommand()
 {
     qInfo() << "Send flash command";
     m_serialPort->write(kFlashFwCmd, sizeof(kFlashFwCmd));
-    m_serialPort->waitForBytesWritten(1000);
     QThread::msleep(400); //wait for restart
 }
 
-bool Flasher::checkIfFirmwareIsProtected(void)
+void Flasher::SetAction(const FlasherActions& action)
 {
-    qInfo() << "Send is firmware protected command";
-    m_serialPort->write(kIsFwProtectedCmd, sizeof(kIsFwProtectedCmd));
-    m_serialPort->waitForReadyRead(kSerialTimeoutInMs);
-    return checkTrue();
+    m_action = action;
+}
+
+void Flasher::SetFilePath(const QString& filePath)
+{
+    m_filePath = filePath;
+}
+
+void Flasher::SetState(const FlasherStates& state)
+{
+    m_state = state;
 }
 
 bool Flasher::sendEnableFirmwareProtection(void)

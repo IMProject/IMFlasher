@@ -63,20 +63,21 @@ namespace flasher {
 
 enum class FlasherStates {
     kIdle,
-    kInit,
     kTryToConnect,
     kConnected,
     kDisconnected,
-    kBoardId,
     kGetBoardIdKey,
-    kBoardCheckRegistration,
-    kFirmwareSelected,
     kFlash,
-    kEnterExitBootloader
+    kReconnect,
+    kError
 };
 
 enum class FlasherActions {
     kNoAction,
+    kCheckBoardRegistration,
+    kEnterBootloader,
+    kExitBootloader,
+    kGetBoardId,
     kSelectFirmware
 };
 
@@ -90,8 +91,6 @@ public:
 
     void init();
     std::shared_ptr<communication::SerialPort> getSerialPort() const;
-    bool collectBoardId();
-    bool getBoardKey();
     void saveBoardKeyToFile();
     bool getBoardKeyFromServer();
     bool sendKey();
@@ -100,14 +99,12 @@ public:
     bool crcCheck(const uint8_t* data, uint32_t size);
     bool checkAck();
     bool checkTrue();
-    bool openFirmwareFile(const QString& filePath);
-    void openSerialPort();
-    void closeSerialPort();
-    void reopenSerialPort();
-    void setState(const FlasherStates& state);
-    void SetAction(const FlasherActions& action);
+    bool CollectBoardId();
+    bool GetBoardKey();
+    bool OpenFirmwareFile(const QString& filePath);
     void SendFlashCommand();
-    bool checkIfFirmwareIsProtected(void);
+    void SetAction(const FlasherActions& action);
+    void SetState(const FlasherStates& state);
     bool sendEnableFirmwareProtection(void);
     bool sendDisableFirmwareProtection(void);
     void getVersion(void);
@@ -117,13 +114,11 @@ signals:
     void clearProgress();
     void showStatusMsg(const QString& text);
     void failedToConnect();
-    void openSerialPortInThread();
-    void closeSerialPortInThread();
     void runLoop();
     void textInBrowser(const QString& boardId);
     void isBootloader(const bool& bootloader);
     void isReadProtectionEnabled(const bool& enabled);
-    void readyToFlashId();
+    void enableLoadButton();
 
 public slots:
     void loopHandler();
@@ -132,13 +127,12 @@ private:
     QThread workerThread;
     std::shared_ptr<communication::SerialPort> m_serialPort;
     QFile m_fileFirmware;
-    std::shared_ptr<QFile> m_keysFile;
+    QFile m_keysFile;
     communication::SocketClient m_socketClient;
 
-    FlasherStates m_state {FlasherStates::kInit};
+    FlasherStates m_state {FlasherStates::kIdle};
     FlasherActions m_action {FlasherActions::kNoAction};
     qint64 m_firmwareSize {0};
-    bool m_tryOpen {false};
     bool m_isPortOpen {false};
     bool m_isSecureBoot {true};
     QString m_boardId;
@@ -148,6 +142,7 @@ private:
     bool m_isTryConnectStart {false};
     QElapsedTimer m_timerTryConnect;
 
+    bool IsFirmwareProtected();
     bool SendDisconnectCmd();
     bool SendEnterBootloaderCommand();
     bool SendExitBootloaderCommand();
