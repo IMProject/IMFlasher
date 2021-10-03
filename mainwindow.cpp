@@ -108,7 +108,7 @@ void MainWindow::openSerialPortUi()
 {
     m_ui->actionConnect->setEnabled(false);
     m_ui->actionDisconnect->setEnabled(true);
-    m_flasher->SetState(flasher::FlasherStates::kTryToConnect);;
+    m_flasher->SetState(flasher::FlasherStates::kTryToConnect);
 }
 
 void MainWindow::closeSerialPortUi()
@@ -172,7 +172,7 @@ void MainWindow::showStatusMessage(const QString &message)
 
 void MainWindow::on_selectFirmware_clicked()
 {
-    m_flasher->SetAction(flasher::FlasherActions::kSelectFirmware);
+    m_flasher->SetState(flasher::FlasherStates::kSelectFirmware);
 }
 
 void MainWindow::on_loadFirmware_clicked()
@@ -186,16 +186,16 @@ void MainWindow::on_loadFirmware_clicked()
 
 void MainWindow::on_registerButton_clicked()
 {
-    m_flasher->SetState(flasher::FlasherStates::kGetBoardIdKey);
+    m_flasher->SetState(flasher::FlasherStates::kRegisterBoard);
 }
 
 void MainWindow::on_enterBootloader_clicked()
 {
     if (m_isBootloader) {
-        m_flasher->SetAction(flasher::FlasherActions::kExitBootloader);
+        m_flasher->SetState(flasher::FlasherStates::kExitBootloader);
     }
     else {
-        m_flasher->SetAction(flasher::FlasherActions::kEnterBootloader);
+        m_flasher->SetState(flasher::FlasherStates::kEnterBootloader);
     }
 }
 

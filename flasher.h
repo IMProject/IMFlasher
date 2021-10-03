@@ -66,19 +66,14 @@ enum class FlasherStates {
     kTryToConnect,
     kConnected,
     kDisconnected,
-    kGetBoardIdKey,
+    kRegisterBoard,
+    kSelectFirmware,
+    kCheckBoardInfo,
     kFlash,
-    kReconnect,
-    kError
-};
-
-enum class FlasherActions {
-    kNoAction,
-    kCheckBoardRegistration,
     kEnterBootloader,
     kExitBootloader,
-    kGetBoardId,
-    kSelectFirmware
+    kReconnect,
+    kError
 };
 
 class Flasher : public QObject
@@ -91,9 +86,6 @@ public:
 
     void init();
     std::shared_ptr<communication::SerialPort> getSerialPort() const;
-    void saveBoardKeyToFile();
-    bool getBoardKeyFromServer();
-    bool sendKey();
     bool startErase();
     std::tuple<bool, QString, QString> startFlash();
     bool crcCheck(const uint8_t* data, uint32_t size);
@@ -103,11 +95,9 @@ public:
     bool GetBoardKey();
     bool OpenFirmwareFile(const QString& filePath);
     void SendFlashCommand();
-    void SetAction(const FlasherActions& action);
     void SetState(const FlasherStates& state);
     bool sendEnableFirmwareProtection(void);
     bool sendDisableFirmwareProtection(void);
-    void getVersion(void);
 
 signals:
     void updateProgress(const qint64& dataPosition, const qint64& firmwareSize);
@@ -131,22 +121,21 @@ private:
     communication::SocketClient m_socketClient;
 
     FlasherStates m_state {FlasherStates::kIdle};
-    FlasherActions m_action {FlasherActions::kNoAction};
-    qint64 m_firmwareSize {0};
-    bool m_isPortOpen {false};
     bool m_isSecureBoot {true};
     QString m_boardId;
     QString m_boardKey;
     QJsonObject m_jsonObject;
-    QString m_filePath;
     bool m_isTryConnectStart {false};
     QElapsedTimer m_timerTryConnect;
 
+    bool GetBoardKeyFromServer();
+    void GetVersion();
     bool IsFirmwareProtected();
+    void SaveBoardKeyToFile();
     bool SendDisconnectCmd();
     bool SendEnterBootloaderCommand();
     bool SendExitBootloaderCommand();
-    void SetFilePath(const QString& filePath);
+    bool SendKey();
 };
 
 } // namespace flasher
