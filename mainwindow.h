@@ -37,9 +37,7 @@
 
 #include <QMainWindow>
 
-namespace Ui {
-class MainWindow;
-}
+#include "ui_mainwindow.h"
 
 namespace flasher {
 class Flasher;
@@ -55,15 +53,7 @@ public:
     explicit MainWindow(std::shared_ptr<flasher::Flasher> flasher, QWidget *parent = nullptr);
     ~MainWindow();
 
-    void closeSerialPort();
-    void showStatusMessage(const QString &message);
-    void openSerialPortUi();
-    void closeSerialPortUi();
-
 private slots:
-    void isBootloaderUi(const bool& bootloader);
-    void isReadProtectionEnabledUi(const bool& isProteced);
-
     void on_selectFirmware_clicked();
     void on_loadFirmware_clicked();
     void on_registerButton_clicked();
@@ -71,13 +61,16 @@ private slots:
     void on_protectButton_clicked();
 
 private:
-    void initActionsConnections();
-
-private:
-    std::shared_ptr<Ui::MainWindow> m_ui;
+    Ui::MainWindow m_ui;
     std::shared_ptr<flasher::Flasher> m_flasher;
-    bool m_isBootloader; // USB can be connected to bootloader or application
-    bool m_isReadProtectionEnabled;  // Firmware is protected
+    bool m_isBootloader {false};
+    bool m_isReadProtectionEnabled {false};
+
+    void ConnectActions();
+    void ClearProgress();
+    void DisableAllButtons();
+    void InitActions();
+    void ShowStatusMessage(const QString &message);
 };
 
 } // namespace gui

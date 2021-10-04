@@ -168,6 +168,7 @@ void Flasher::loopHandler()
             }
 
         } else {
+            emit disableAllButtons();
             m_isTryConnectStart = true;
             m_timerTryConnect.start();
         }
@@ -228,6 +229,7 @@ void Flasher::loopHandler()
             }
             else {
                 emit textInBrowser("Board is not registered! Press the register button");
+                emit enableRegisterButton();
             }
 
             SetState(FlasherStates::kIdle);
@@ -312,7 +314,6 @@ void Flasher::loopHandler()
     {
         if (SendExitBootloaderCommand()) {
             SetState(FlasherStates::kReconnect);
-            emit isBootloader(false);
         }
         else {
             SetState(FlasherStates::kError);
@@ -323,6 +324,7 @@ void Flasher::loopHandler()
 
     case FlasherStates::kReconnect:
     {
+        emit disableAllButtons();
         if (m_serialPort->isOpen()) {
             m_serialPort->closeConn();
         }
