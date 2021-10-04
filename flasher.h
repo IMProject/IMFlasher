@@ -106,9 +106,11 @@ signals:
     void failedToConnect();
     void runLoop();
     void textInBrowser(const QString& boardId);
-    void isBootloader(const bool& bootloader);
-    void isReadProtectionEnabled(const bool& enabled);
+    void isBootloader(const bool& isBootloader);
+    void isReadProtectionEnabled(const bool& isEnabled);
+    void disableAllButtons();
     void enableLoadButton();
+    void enableRegisterButton();
 
 public slots:
     void loopHandler();

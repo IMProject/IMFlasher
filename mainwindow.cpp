@@ -37,7 +37,6 @@
 #include <QDebug>
 #include <QMessageBox>
 
-#include "ui_mainwindow.h"
 #include "flasher.h"
 
 namespace gui {
@@ -57,117 +56,119 @@ bool ShowInfoMsg(const QString& title, const QString& description)
 
 MainWindow::MainWindow(std::shared_ptr<flasher::Flasher> flasher, QWidget *parent) :
     QMainWindow(parent),
-    m_ui(std::make_shared<Ui::MainWindow>()),
-    m_flasher(flasher),
-    m_isBootloader(false)
+    m_flasher(flasher)
 {
-    m_ui->setupUi(this);
+    m_ui.setupUi(this);
 
-    m_ui->actionConnect->setEnabled(true);
-    m_ui->actionDisconnect->setEnabled(false);
-    m_ui->actionQuit->setEnabled(true);
-    m_ui->enterBootloader->setEnabled(true);
-    m_ui->loadFirmware->setEnabled(false);
-    m_ui->protectButton->setEnabled(false);
-
-    m_ui->progressBar->hide();
-    m_ui->progressBar->setValue(0);
-
-    m_ui->registerButton->setEnabled(true);
-
-    this->initActionsConnections();
+    InitActions();
+    ConnectActions();
+    DisableAllButtons();
+    ClearProgress();
 
     connect(m_flasher.get(), &flasher::Flasher::updateProgress, this, [&] (const qint64& sentSize, const qint64& firmwareSize) {
-        int progressPercentage = (100 * sentSize) / firmwareSize;
-        m_ui->progressBar->setValue(progressPercentage);
+        const int progressPercentage = (100 * sentSize) / firmwareSize;
+        m_ui.progressBar->setValue(progressPercentage);
         qInfo() << sentSize << "/" << firmwareSize << "B, " << progressPercentage <<"%";
     });
 
-    connect(m_flasher.get(), &flasher::Flasher::clearProgress, this, [&] (void) {
-        m_ui->progressBar->hide();
-        m_ui->progressBar->setValue(0);
-    });
+    connect(m_flasher.get(), &flasher::Flasher::clearProgress, this, &MainWindow::ClearProgress);
 
-    connect(m_flasher.get(), &flasher::Flasher::showStatusMsg, this, [&] (const QString& text) { this->showStatusMessage(text); });
+    connect(m_flasher.get(), &flasher::Flasher::showStatusMsg, this, [&] (const QString& text) { ShowStatusMessage(text); });
 
     connect(m_flasher.get(), &flasher::Flasher::failedToConnect, this, [&] (void) {
-        this->showStatusMessage(tr("Failed to connect!"));
-        m_ui->actionConnect->setEnabled(true);
-        m_ui->actionDisconnect->setEnabled(false);
+        ShowStatusMessage(tr("Failed to connect!"));
+        m_ui.actionConnect->setEnabled(true);
+        m_ui.actionDisconnect->setEnabled(false);
     });
 
-    connect(m_flasher.get(), &flasher::Flasher::textInBrowser, this, [&] (const auto& text) { m_ui->textBrowser->append(text); });
-    connect(m_flasher.get(), &flasher::Flasher::isBootloader, this, &MainWindow::isBootloaderUi);
-    connect(m_flasher.get(), &flasher::Flasher::isReadProtectionEnabled, this, &MainWindow::isReadProtectionEnabledUi);
-    connect(m_flasher.get(), &flasher::Flasher::enableLoadButton, this, [&] (void) { m_ui->loadFirmware->setEnabled(true); });
+    connect(m_flasher.get(), &flasher::Flasher::textInBrowser, this, [&] (const auto& text) { m_ui.textBrowser->append(text); });
+
+    connect(m_flasher.get(), &flasher::Flasher::isBootloader, this, [&] (const auto& isBootloader)
+    {
+        m_isBootloader = isBootloader;
+        m_ui.enterBootloader->setEnabled(true);
+
+        if (isBootloader) {
+            m_ui.enterBootloader->setText("Exit bootloader");
+            m_ui.selectFirmware->setEnabled(true);
+            m_ui.protectButton->setEnabled(true);
+        }
+        else {
+            m_ui.enterBootloader->setText("Enter bootloader");
+            m_ui.selectFirmware->setEnabled(false);
+            m_ui.protectButton->setEnabled(false);
+        }
+    });
+
+    connect(m_flasher.get(), &flasher::Flasher::isReadProtectionEnabled, this, [&] (const auto& isEnabled)
+    {
+        m_isReadProtectionEnabled = isEnabled;
+        if (isEnabled) {
+            m_ui.protectButton->setText("Disable read protection");
+        }
+        else {
+            m_ui.protectButton->setText("Enable read protection");
+        }
+    });
+
+    connect(m_flasher.get(), &flasher::Flasher::disableAllButtons, this, &MainWindow::DisableAllButtons);
+    connect(m_flasher.get(), &flasher::Flasher::enableLoadButton, this, [&] (void) { m_ui.loadFirmware->setEnabled(true); });
+    connect(m_flasher.get(), &flasher::Flasher::enableRegisterButton, this, [&] (void) { m_ui.registerButton->setEnabled(true); });
 }
 
 MainWindow::~MainWindow() = default;
 
-void MainWindow::openSerialPortUi()
+void MainWindow::ClearProgress()
 {
-    m_ui->actionConnect->setEnabled(false);
-    m_ui->actionDisconnect->setEnabled(true);
-    m_flasher->SetState(flasher::FlasherStates::kTryToConnect);
+    m_ui.progressBar->hide();
+    m_ui.progressBar->setValue(0);
 }
 
-void MainWindow::closeSerialPortUi()
+void MainWindow::DisableAllButtons()
 {
-    m_ui->actionConnect->setEnabled(true);
-    m_ui->actionDisconnect->setEnabled(false);
-    m_flasher->SetState(flasher::FlasherStates::kDisconnected);
+    m_ui.enterBootloader->setEnabled(false);
+    m_ui.selectFirmware->setEnabled(false);
+    m_ui.loadFirmware->setEnabled(false);
+    m_ui.protectButton->setEnabled(false);
+    m_ui.registerButton->setEnabled(false);
 }
 
-void MainWindow::isBootloaderUi(const bool& bootloader)
+void MainWindow::ConnectActions()
 {
-    m_isBootloader = bootloader;
+    connect(m_ui.actionConnect, &QAction::triggered, this, [&] (void)
+    {
+        m_ui.actionConnect->setEnabled(false);
+        m_ui.actionDisconnect->setEnabled(true);
+        m_flasher->SetState(flasher::FlasherStates::kTryToConnect);
+    });
 
-    if(bootloader) {
-        m_ui->enterBootloader->setText("Exit bootloader");
-        m_ui->loadFirmware->setEnabled(false);
-        m_ui->selectFirmware->setEnabled(true);
-        m_ui->protectButton->setEnabled(true);
-        m_ui->registerButton->setEnabled(false);
-        m_ui->enterBootloader->setEnabled(true);
+    connect(m_ui.actionDisconnect, &QAction::triggered, this, [&] (void)
+    {
+        m_ui.actionConnect->setEnabled(true);
+        m_ui.actionDisconnect->setEnabled(false);
+        DisableAllButtons();
+        m_flasher->SetState(flasher::FlasherStates::kDisconnected);
+    });
 
-    } else {
-        m_ui->enterBootloader->setText("Enter bootloader");
-        m_ui->enterBootloader->setEnabled(true);
-        m_ui->loadFirmware->setEnabled(false);
-        m_ui->selectFirmware->setEnabled(false);
-        m_ui->protectButton->setEnabled(false);
-    }
-}
+    connect(m_ui.actionQuit, &QAction::triggered, this, [&] (void) { close(); });
 
-void MainWindow::isReadProtectionEnabledUi(const bool& enabled)
-{
-    m_isReadProtectionEnabled = enabled;
-
-    if(enabled) {
-        m_ui->protectButton->setText("Disable read protection");
-    } else {
-        m_ui->protectButton->setText("Enable read protection");
-    }
-}
-
-void MainWindow::initActionsConnections()
-{
-    connect(m_ui->actionConnect, &QAction::triggered, this, &MainWindow::openSerialPortUi);
-
-    connect(m_ui->actionDisconnect, &QAction::triggered, this, &MainWindow::closeSerialPortUi);
-
-    connect(m_ui->actionQuit, &QAction::triggered, this, [&] (void) { this->close(); });
-
-    connect(m_ui->actionAbout, &QAction::triggered, this, [&] (void) {
+    connect(m_ui.actionAbout, &QAction::triggered, this, [&] (void) {
         QMessageBox::about(this,
                            tr("About IMFlasher"),
                            tr("The <b>IMFlasher</b> v1.2.0"));
     });
 }
 
-void MainWindow::showStatusMessage(const QString &message)
+void MainWindow::InitActions()
 {
-    m_ui->statusLabel->setText(message);
+    m_ui.actionConnect->setEnabled(true);
+    m_ui.actionDisconnect->setEnabled(false);
+    m_ui.actionQuit->setEnabled(true);
+}
+
+void MainWindow::ShowStatusMessage(const QString &message)
+{
+    m_ui.statusLabel->setText(message);
 }
 
 void MainWindow::on_selectFirmware_clicked()
@@ -177,15 +178,16 @@ void MainWindow::on_selectFirmware_clicked()
 
 void MainWindow::on_loadFirmware_clicked()
 {
-    if(m_isBootloader) {
-        m_ui->loadFirmware->setEnabled(false);
-        m_ui->progressBar->show();
+    if (m_isBootloader) {
+        m_ui.loadFirmware->setEnabled(false);
+        m_ui.progressBar->show();
         m_flasher->SetState(flasher::FlasherStates::kFlash);
     }
 }
 
 void MainWindow::on_registerButton_clicked()
 {
+    m_ui.registerButton->setEnabled(false);
     m_flasher->SetState(flasher::FlasherStates::kRegisterBoard);
 }
 
@@ -201,19 +203,15 @@ void MainWindow::on_enterBootloader_clicked()
 
 void MainWindow::on_protectButton_clicked()
 {
-    if(!m_isReadProtectionEnabled) {
+    if (!m_isReadProtectionEnabled) {
         if (m_flasher->sendEnableFirmwareProtection()) {
             m_flasher->SetState(flasher::FlasherStates::kReconnect);
         }
-
-    } else {
-
-        bool proceed = ShowInfoMsg("Disable read protection", "Once disabled, complete flash will be erased including bootloader!");
-
-        if(proceed) {
-            bool success = m_flasher->sendDisableFirmwareProtection();
-            if(success) {
-                m_ui->protectButton->setEnabled(false);
+    }
+    else {
+        if (ShowInfoMsg("Disable read protection", "Once disabled, complete flash will be erased including bootloader!")) {
+            if (m_flasher->sendDisableFirmwareProtection()) {
+                m_ui.protectButton->setEnabled(false);
             }
         }
     }
