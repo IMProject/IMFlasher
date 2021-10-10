@@ -40,10 +40,10 @@
 namespace crc {
 
 uint32_t CalculateCrc32(
-        const uint8_t *crcDataPtr,
-        const uint32_t crcLength,
-        const bool reflectedOutput,
-        const bool reflectedInput);
+    const uint8_t *crcDataPtr,
+    const uint32_t crcLength,
+    const bool reflectedOutput,
+    const bool reflectedInput);
 
 } // namespace crc
 #endif // CRC32_H
