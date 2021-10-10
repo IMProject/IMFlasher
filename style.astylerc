@@ -1,0 +1,41 @@
+#Documentation http://manpages.ubuntu.com/manpages/trusty/man1/astyle.1.html
+
+# 4 space indent
+indent=spaces=4
+
+# Indent 'class' and 'struct' access modifiers, 'public:', 'protected:' and 'private:', one half indent.
+indent-classes
+
+# Indent 'switch' blocks so that the 'case X:' statements are indented in the switch block. The entire case block is indented.
+indent-switches
+
+# Do not retain a backup of the original file. The original file is purged after it is formatted.
+#suffix=none
+
+# Don't break one-line blocks.
+keep-one-line-blocks
+
+# Don't break complex statements and multiple statements residing on a single line.
+keep-one-line-statements
+
+# Attach a pointer or reference operator (*, &, or ^) to the variable name (right).
+align-pointer=name
+
+# Insert space padding after paren headers only (e.g. 'if', 'for', 'while'...).
+pad-header
+
+# Insert space padding around operators.
+pad-oper
+
+#Convert tabs to spaces in the non-indentation part  of  the  line.
+#The  number  of spaces  inserted  will  maintain  the  spacing  of the tab.
+convert-tabs
+
+#The length will break a line if the code exceeds the preset number of characters
+max-code-length=200
+
+#Set the minimal indent that is added when a header is built of multiple lines.
+min-conditional-indent=0
+
+#The maximum of # spaces to indent a continuation line.
+max-continuation-indent=120
