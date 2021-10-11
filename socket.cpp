@@ -36,8 +36,9 @@
 
 #include <QHostAddress>
 #include <QMessageAuthenticationCode>
+#include <QTcpSocket>
 
-namespace communication {
+namespace socket {
 namespace {
 
 constexpr quint16 kPort {5322};
@@ -45,38 +46,33 @@ constexpr char kShaKey[] = "NDQ4N2Y1YjFhZTg3ZGI3MTA1MjlhYmM3";
 
 } // namespace
 
-SocketClient::SocketClient() : m_tcpClient() {}
-SocketClient::~SocketClient() = default;
-
-bool SocketClient::DataTransfer(const QByteArray &inData, QByteArray &outData)
+bool DataTransfer(const QByteArray &in_data, QByteArray &out_data)
 {
     bool success = false;
+    QTcpSocket tcp_socket;
     QMessageAuthenticationCode code(QCryptographicHash::Sha256);
     code.setKey(kShaKey);
 
-    m_tcpClient.connectToHost(QHostAddress::LocalHost, kPort);
-    success = m_tcpClient.waitForReadyRead();
-    if(success) {
-        QByteArray token = m_tcpClient.readAll();
+    tcp_socket.connectToHost(QHostAddress::LocalHost, kPort);
+
+    if (tcp_socket.waitForReadyRead()) {
+        QByteArray token = tcp_socket.readAll();
         code.addData(token);
 
         QByteArray hash = code.result();
-        m_tcpClient.write(hash);   //send hash
-        success = m_tcpClient.waitForBytesWritten();
+        tcp_socket.write(hash);
+
+        if (tcp_socket.waitForBytesWritten()) {
+            tcp_socket.write(in_data);
+
+            if (tcp_socket.waitForBytesWritten()) {
+                out_data = tcp_socket.readAll();
+                success = true;
+            }
+        }
     }
 
-    if(success) {
-        m_tcpClient.write(inData);          //send board id
-        success = m_tcpClient.waitForBytesWritten();
-
-    }
-
-    if(success) {
-        success = m_tcpClient.waitForReadyRead();
-        outData = m_tcpClient.readAll();
-    }
-
-    m_tcpClient.close();
+    tcp_socket.close();
 
     return success;
 }

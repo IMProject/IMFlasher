@@ -5,7 +5,6 @@ TARGET = imflasher
 TEMPLATE = app
 
 SOURCES += \
-    style.astylerc \
     crc32.cpp \
     flasher.cpp \
     main.cpp \

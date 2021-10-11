@@ -40,8 +40,6 @@
 #include <QJsonObject>
 #include <QThread>
 
-#include "socket.h"
-
 namespace communication {
 class SerialPort;
 } // namespace communication
@@ -120,7 +118,6 @@ private:
     std::shared_ptr<communication::SerialPort> m_serialPort;
     QFile m_fileFirmware;
     QFile m_keysFile;
-    communication::SocketClient m_socketClient;
 
     FlasherStates m_state {FlasherStates::kIdle};
     bool m_isSecureBoot {true};
