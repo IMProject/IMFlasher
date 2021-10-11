@@ -32,24 +32,14 @@
  *
  ****************************************************************************/
 
-#ifndef SOCKET_H
-#define SOCKET_H
+#ifndef SOCKET_H_
+#define SOCKET_H_
 
-#include <QTcpSocket>
+#include <QByteArray>
 
-namespace communication {
+namespace socket {
 
-class SocketClient
-{
-public:
-    SocketClient();
-    ~SocketClient();
+bool DataTransfer(const QByteArray &in_data, QByteArray &out_data);
 
-    bool DataTransfer(const QByteArray &inData, QByteArray &outData);
-
-private:
-    QTcpSocket m_tcpClient;
-};
-
-} // namespace communication
-#endif // SOCKET_H
+} // namespace socket
+#endif // SOCKET_H_

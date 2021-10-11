@@ -42,6 +42,7 @@
 
 #include "crc32.h"
 #include "serial_port.h"
+#include "socket.h"
 
 QT_BEGIN_NAMESPACE
 void Worker::doWork()
@@ -624,9 +625,9 @@ bool Flasher::GetBoardKeyFromServer()
     QByteArray dataIn = QByteArray::fromHex(m_boardId.toUtf8());
     QByteArray dataOut;
 
-    success = m_socketClient.DataTransfer(dataIn, dataOut);
-    if (success) {
+    if (socket::DataTransfer(dataIn, dataOut)) {
         m_boardKey = dataOut.toHex();
+        success = true;
     }
 
     return success;

@@ -6,5 +6,6 @@
         <file>images/settings.png</file>
         <file>images/clear.png</file>
         <file>images/capman.png</file>
+        <file>style.astylerc</file>
     </qresource>
 </RCC>
