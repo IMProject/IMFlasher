@@ -41,7 +41,6 @@
 namespace communication {
 namespace {
 
-constexpr int kTimerTimeoutInMs {20000};
 constexpr int kSerialTimeoutInMs {100};
 constexpr char kSoftwareTypeCmd[] = "software_type";
 constexpr char kSwTypeImBoot[] = "IMBootloader";
@@ -52,104 +51,61 @@ constexpr char kSwTypeImApp[] = "IMApplication";
 SerialPort::SerialPort() = default;
 SerialPort::~SerialPort() = default;
 
-void SerialPort::openConn()
+void SerialPort::CloseConn()
 {
-    if((m_isOpen == false) && !m_portName.isEmpty()) {
-        setPortName(m_portName);
-        setBaudRate(QSerialPort::Baud115200);
-        setDataBits(QSerialPort::Data8);
-        setParity(QSerialPort::NoParity);
-
-        setStopBits(QSerialPort::OneStop);
-        setFlowControl(QSerialPort::NoFlowControl);
-        if (open(QIODevice::ReadWrite)) {
-            m_isOpen = true;
-        } else {
-            m_isOpen = false;
-        }
-    }
-}
-
-void SerialPort::openConnBlocking()
-{
-    QElapsedTimer timer;
-    timer.start();
-
-    while (!m_isOpen) {
-        tryOpenPort();
-
-        if (timer.hasExpired(kTimerTimeoutInMs)) {
-            qInfo() << "Timeout";
-            break;
-        }
-    }
-}
-void SerialPort::closeConn()
-{
-    if (m_isOpen) {
+    if (isOpen()) {
         close();
-        m_isOpen = false;
     }
 }
 
-bool SerialPort::isOpen() const
+bool SerialPort::DetectBoard(bool &is_bootloader)
 {
-    return m_isOpen;
-}
-
-bool SerialPort::tryOpenPort()
-{
-   //Auto serching for connected USB
-    bool success = false;
-
-    const auto infos = QSerialPortInfo::availablePorts();
-    for (const QSerialPortInfo &info : infos) {
-
-        m_portName = info.portName();
-
-        openConn();
-
-        if (m_isOpen) {
-
-            if (detectBoard()) {
-                success = true;
-                break;
-
-            } else {
-                closeConn();
-            }
-        }
-    }
-
-    return success;
-}
-
-bool SerialPort::detectBoard()
-{
-    bool isBoardDetected;
+    bool is_board_detected;
     write(kSoftwareTypeCmd, sizeof(kSoftwareTypeCmd));
     waitForReadyRead(kSerialTimeoutInMs);
-    QString softwareType = readAll();
+    QString software_type = readAll();
 
-    if (softwareType == kSwTypeImApp) {
-        // We are in application
-        m_isBootlaoder = false;
-        isBoardDetected = true;
-
-    } else if (softwareType == kSwTypeImBoot) {
-        m_isBootlaoder = true;
-        isBoardDetected = true;
+    if (software_type == kSwTypeImApp) {
+        is_bootloader = false;
+        is_board_detected = true;
+    }
+    else if (software_type == kSwTypeImBoot) {
+        is_bootloader = true;
+        is_board_detected = true;
 
     } else {
-        isBoardDetected = false;
+        is_board_detected = false;
     }
 
-    return isBoardDetected;
+    return is_board_detected;
 }
 
-bool SerialPort::isBootloaderDetected() const
+bool SerialPort::OpenConnection(const QString &port_name)
 {
-    return m_isBootlaoder;
+    if (port_name.isEmpty()) return false;
+
+    setPortName(port_name);
+    setBaudRate(QSerialPort::Baud115200);
+    setDataBits(QSerialPort::Data8);
+    setParity(QSerialPort::NoParity);
+
+    setStopBits(QSerialPort::OneStop);
+    setFlowControl(QSerialPort::NoFlowControl);
+
+    return open(QIODevice::ReadWrite);
+}
+
+bool SerialPort::TryOpenPort(bool &is_bootloader)
+{
+    const auto &infos = QSerialPortInfo::availablePorts();
+    for (const auto &info : infos) {
+        if (OpenConnection(info.portName())) {
+            if (DetectBoard(is_bootloader)) return true;
+            else CloseConn();
+        }
+    }
+
+    return false;
 }
 
 } // namespace communication

@@ -40,9 +40,7 @@
 #include <QJsonObject>
 #include <QThread>
 
-namespace communication {
-class SerialPort;
-} // namespace communication
+#include "serial_port.h"
 
 QT_BEGIN_NAMESPACE
 class Worker : public QObject
@@ -83,7 +81,6 @@ public:
     ~Flasher();
 
     void init();
-    std::shared_ptr<communication::SerialPort> getSerialPort() const;
     bool startErase();
     std::tuple<bool, QString, QString> startFlash();
     bool crcCheck(const uint8_t* data, uint32_t size);
@@ -91,11 +88,13 @@ public:
     bool checkTrue();
     bool CollectBoardId();
     bool GetBoardKey();
+    bool IsBootloaderDetected() const;
     bool OpenFirmwareFile(const QString& filePath);
     void SendFlashCommand();
     void SetState(const FlasherStates& state);
-    bool sendEnableFirmwareProtection(void);
-    bool sendDisableFirmwareProtection(void);
+    bool sendEnableFirmwareProtection();
+    bool sendDisableFirmwareProtection();
+    void TryToConnect();
 
 signals:
     void updateProgress(const qint64& dataPosition, const qint64& firmwareSize);
@@ -115,7 +114,6 @@ public slots:
 
 private:
     QThread workerThread;
-    std::shared_ptr<communication::SerialPort> m_serialPort;
     QFile m_fileFirmware;
     QFile m_keysFile;
 
@@ -126,6 +124,9 @@ private:
     QJsonObject m_jsonObject;
     bool m_isTryConnectStart {false};
     QElapsedTimer m_timerTryConnect;
+
+    bool is_bootloader_ {false};
+    communication::SerialPort serial_port_;
 
     bool GetBoardKeyFromServer();
     void GetVersion();

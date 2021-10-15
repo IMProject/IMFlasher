@@ -85,7 +85,6 @@ MainWindow::MainWindow(std::shared_ptr<flasher::Flasher> flasher, QWidget *paren
 
     connect(m_flasher.get(), &flasher::Flasher::isBootloader, this, [&] (const auto& isBootloader)
     {
-        m_isBootloader = isBootloader;
         m_ui.enterBootloader->setEnabled(true);
 
         if (isBootloader) {
@@ -178,11 +177,9 @@ void MainWindow::on_selectFirmware_clicked()
 
 void MainWindow::on_loadFirmware_clicked()
 {
-    if (m_isBootloader) {
-        m_ui.loadFirmware->setEnabled(false);
-        m_ui.progressBar->show();
-        m_flasher->SetState(flasher::FlasherStates::kFlash);
-    }
+    m_ui.loadFirmware->setEnabled(false);
+    m_ui.progressBar->show();
+    m_flasher->SetState(flasher::FlasherStates::kFlash);
 }
 
 void MainWindow::on_registerButton_clicked()
@@ -193,7 +190,7 @@ void MainWindow::on_registerButton_clicked()
 
 void MainWindow::on_enterBootloader_clicked()
 {
-    if (m_isBootloader) {
+    if (m_flasher->IsBootloaderDetected()) {
         m_flasher->SetState(flasher::FlasherStates::kExitBootloader);
     }
     else {

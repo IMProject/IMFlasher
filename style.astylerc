@@ -4,7 +4,7 @@
 indent=spaces=4
 
 # Indent 'class' and 'struct' access modifiers, 'public:', 'protected:' and 'private:', one half indent.
-indent-classes
+indent-modifiers
 
 # Indent 'switch' blocks so that the 'case X:' statements are indented in the switch block. The entire case block is indented.
 indent-switches
