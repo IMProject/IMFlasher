@@ -53,10 +53,9 @@ int main(int argc, char *argv[])
         QString actionString = argv[1];
         QString filePath = argv[2];
 
-        //This is a blocking solution only for the console. No init needed.
-        flasher->getSerialPort()->openConnBlocking();
+        flasher->TryToConnect();
 
-        if (!(flasher->getSerialPort()->isBootloaderDetected())) {
+        if (!(flasher->IsBootloaderDetected())) {
             flasher->SendFlashCommand();
             qInfo() << "Unplug USB run this app again and plug USB! ";
 

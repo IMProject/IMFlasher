@@ -63,7 +63,6 @@ private slots:
 private:
     Ui::MainWindow m_ui;
     std::shared_ptr<flasher::Flasher> m_flasher;
-    bool m_isBootloader {false};
     bool m_isReadProtectionEnabled {false};
 
     void ConnectActions();

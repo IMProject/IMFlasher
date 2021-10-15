@@ -32,8 +32,8 @@
  *
  ****************************************************************************/
 
-#ifndef SERIAL_PORT_H
-#define SERIAL_PORT_H
+#ifndef SERIAL_PORT_H_
+#define SERIAL_PORT_H_
 
 #include <QSerialPort>
 
@@ -43,22 +43,16 @@ class SerialPort : public QSerialPort
 {
     Q_OBJECT
 
-public:
+  public:
     SerialPort();
     ~SerialPort();
-    void openConn();
-    void openConnBlocking();
-    void closeConn();
-    bool isOpen() const;
-    bool tryOpenPort();
-    bool detectBoard();
-    bool isBootloaderDetected() const;
+    void CloseConn();
+    bool TryOpenPort(bool &is_bootloader);
 
-private:
-    bool m_isBootlaoder {false};
-    bool m_isOpen {false};
-    QString m_portName;
+  private:
+    bool DetectBoard(bool &is_bootloader);
+    bool OpenConnection(const QString &port_name);
 };
 
 } // namespace communication
-#endif // SERIAL_PORT_H
+#endif // SERIAL_PORT_H_
