@@ -90,6 +90,7 @@ public:
     bool GetBoardKey();
     bool IsBootloaderDetected() const;
     bool OpenFirmwareFile(const QString& filePath);
+    bool SendEnterBootloaderCommand();
     void SendFlashCommand();
     void SetState(const FlasherStates& state);
     bool sendEnableFirmwareProtection();
@@ -133,7 +134,6 @@ private:
     bool IsFirmwareProtected();
     void SaveBoardKeyToFile();
     bool SendDisconnectCmd();
-    bool SendEnterBootloaderCommand();
     bool SendExitBootloaderCommand();
     bool SendKey();
 };
