@@ -56,11 +56,12 @@ int main(int argc, char *argv[])
         flasher->TryToConnect();
 
         if (!(flasher->IsBootloaderDetected())) {
-            flasher->SendFlashCommand();
-            qInfo() << "Unplug USB run this app again and plug USB! ";
-
-        } else {
-
+            if (!flasher->SendEnterBootloaderCommand()) {
+                flasher->SendFlashCommand();
+            }
+            qInfo() << "Bootloader entered, please run this app again!";
+        }
+        else {
             if (flasher->CollectBoardId()) {
 
                 if (flasher->GetBoardKey()) {
