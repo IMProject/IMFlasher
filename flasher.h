@@ -67,8 +67,10 @@ enum class FlasherStates {
     kCheckBoardInfo,
     kFlash,
     kEnterBootloader,
-    kExitBootloader,
+    kEnteringBootloader,
     kReconnect,
+    kExitBootloader,
+    kExitingBootloader,
     kError
 };
 
@@ -95,7 +97,7 @@ public:
     void SetState(const FlasherStates& state);
     bool sendEnableFirmwareProtection();
     bool sendDisableFirmwareProtection();
-    void TryToConnect();
+    void TryToConnectConsole();
 
 signals:
     void updateProgress(const qint64& dataPosition, const qint64& firmwareSize);
@@ -123,19 +125,22 @@ private:
     QString m_boardId;
     QString m_boardKey;
     QJsonObject m_jsonObject;
-    bool m_isTryConnectStart {false};
-    QElapsedTimer m_timerTryConnect;
 
     bool is_bootloader_ {false};
+    bool is_bootloader_expected_ {false};
+    bool is_timer_started_ {false};
     communication::SerialPort serial_port_;
+    QElapsedTimer timer_;
 
     bool GetBoardKeyFromServer();
     void GetVersion();
     bool IsFirmwareProtected();
+    void ReconnectingToBoard();
     void SaveBoardKeyToFile();
     bool SendDisconnectCmd();
     bool SendExitBootloaderCommand();
     bool SendKey();
+    void TryToConnect();
 };
 
 } // namespace flasher
