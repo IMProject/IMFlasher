@@ -53,7 +53,7 @@ int main(int argc, char *argv[])
         QString actionString = argv[1];
         QString filePath = argv[2];
 
-        flasher->TryToConnect();
+        flasher->TryToConnectConsole();
 
         if (!(flasher->IsBootloaderDetected())) {
             if (!flasher->SendEnterBootloaderCommand()) {

@@ -141,37 +141,10 @@ void Flasher::loopHandler()
         break;
 
     case FlasherStates::kTryToConnect:
-    {
-        bool isConnected = false;
-
-        if (m_isTryConnectStart) {
-
-            if (serial_port_.TryOpenPort(is_bootloader_)) {
-                SetState(FlasherStates::kConnected);
-                m_isTryConnectStart = false;
-                isConnected = true;
-            }
-            else {
-                emit showStatusMsg("Trying to connect!");
-            }
-
-            if ((!isConnected) && (m_timerTryConnect.hasExpired(kTryToConnectTimeoutInMs))) {
-                emit failedToConnect();
-                SetState(FlasherStates::kIdle);
-                m_isTryConnectStart = false;
-            }
-
-        } else {
-            emit disableAllButtons();
-            m_isTryConnectStart = true;
-            m_timerTryConnect.start();
-        }
-
+        TryToConnect();
         break;
-    }
 
     case FlasherStates::kConnected:
-
         emit showStatusMsg("Connected");
         if (serial_port_.isOpen()) {
             GetVersion();
@@ -189,7 +162,7 @@ void Flasher::loopHandler()
     case FlasherStates::kDisconnected:
     {
         bool isDisconnectedSuccess = true;
-        m_isTryConnectStart = false;
+        is_timer_started_ = false;
 
         if (serial_port_.isOpen()) {
 
@@ -294,42 +267,50 @@ void Flasher::loopHandler()
     }
 
     case FlasherStates::kEnterBootloader:
-    {
         if (!SendEnterBootloaderCommand()) {
             SendFlashCommand();
         }
 
-        SetState(FlasherStates::kReconnect);
+        is_bootloader_expected_ = true;
+        serial_port_.CloseConn();
+        SetState(FlasherStates::kEnteringBootloader);
         break;
-    }
+
+    case FlasherStates::kEnteringBootloader:
+        emit showStatusMsg("Entering bootloader...");
+        ReconnectingToBoard();
+        break;
 
     case FlasherStates::kExitBootloader:
-    {
         if (SendExitBootloaderCommand()) {
-            SetState(FlasherStates::kReconnect);
+            is_bootloader_expected_ = false;
+            serial_port_.CloseConn();
+            SetState(FlasherStates::kExitingBootloader);
         }
         else {
             SetState(FlasherStates::kError);
         }
 
         break;
-    }
+
+    case FlasherStates::kExitingBootloader:
+        emit showStatusMsg("Exiting bootloader...");
+        ReconnectingToBoard();
+        break;
 
     case FlasherStates::kReconnect:
-    {
         emit disableAllButtons();
-        if (serial_port_.isOpen()) {
-            serial_port_.CloseConn();
-        }
-        else {
+        serial_port_.CloseConn();
+
+        if (!serial_port_.isOpen()) {
             SetState(FlasherStates::kTryToConnect);
         }
 
         break;
-    }
 
     case FlasherStates::kError:
-        qInfo() << "Error";
+        emit showStatusMsg("Error");
+        emit disableAllButtons();
         break;
 
     default:
@@ -647,6 +628,32 @@ bool Flasher::OpenFirmwareFile(const QString& filePath)
     return m_fileFirmware.open(QIODevice::ReadOnly);
 }
 
+void Flasher::ReconnectingToBoard()
+{
+    if (is_timer_started_) {
+        if (serial_port_.TryOpenPort(is_bootloader_)) {
+            if (is_bootloader_ == is_bootloader_expected_) {
+                SetState(FlasherStates::kConnected);
+                is_timer_started_ = false;
+            }
+            else {
+                serial_port_.CloseConn();
+            }
+        }
+
+        if (timer_.hasExpired(kTryToConnectTimeoutInMs)) {
+            ShowInfoMsg("Error!", "Entering/Exiting bootloader cannot be performed!");
+            SetState(FlasherStates::kError);
+            is_timer_started_ = false;
+        }
+
+    } else {
+        emit disableAllButtons();
+        is_timer_started_ = true;
+        timer_.start();
+    }
+}
+
 void Flasher::SaveBoardKeyToFile()
 {
     QTextStream streamConfigFile(&m_keysFile);
@@ -733,7 +740,7 @@ bool Flasher::sendDisableFirmwareProtection()
     return checkAck();
 }
 
-void Flasher::TryToConnect()
+void Flasher::TryToConnectConsole()
 {
     QElapsedTimer timer;
     timer.start();
@@ -745,6 +752,34 @@ void Flasher::TryToConnect()
             qInfo() << "Timeout";
             break;
         }
+    }
+}
+
+void Flasher::TryToConnect()
+{
+    bool is_connected = false;
+
+    if (is_timer_started_) {
+
+        if (serial_port_.TryOpenPort(is_bootloader_)) {
+            SetState(FlasherStates::kConnected);
+            is_timer_started_ = false;
+            is_connected = true;
+        }
+        else {
+            emit showStatusMsg("Trying to connect...");
+        }
+
+        if ((!is_connected) && (timer_.hasExpired(kTryToConnectTimeoutInMs))) {
+            emit failedToConnect();
+            SetState(FlasherStates::kError);
+            is_timer_started_ = false;
+        }
+    }
+    else {
+        emit disableAllButtons();
+        is_timer_started_ = true;
+        timer_.start();
     }
 }
 
