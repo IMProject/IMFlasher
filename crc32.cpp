@@ -38,6 +38,8 @@ namespace crc {
 namespace {
 
 constexpr int kCrcTableSize {256};
+constexpr uint32_t kCrcInitialValue = 0xFFFFFFFFU;
+constexpr uint32_t kCrcXorValue = 0xFFFFFFFFU;
 
 const uint32_t kCrcTable[kCrcTableSize] =
 {
@@ -75,15 +77,15 @@ const uint32_t kCrcTable[kCrcTableSize] =
     0xAFB010B1, 0xAB710D06, 0xA6322BDF, 0xA2F33668, 0xBCB4666D, 0xB8757BDA, 0xB5365D03, 0xB1F740B4
 };
 
-uint32_t Reflect(uint32_t data, const uint8_t nBits)
+uint32_t Reflect(uint32_t data, const uint8_t num_of_bits)
 {
     uint32_t reflection = 0U;
 
     // Reflect the data about the center bit.
-    for (uint8_t bit = 0U; bit < nBits; ++bit) {
+    for (uint8_t bit = 0U; bit < num_of_bits; ++bit) {
         // If the LSB bit is set, set the reflection of it.
         if (data & 0x01U) {
-            reflection |= (1U << ((nBits - 1U) - bit));
+            reflection |= (1U << ((num_of_bits - 1U) - bit));
         }
 
         data = (data >> 1U);
@@ -95,33 +97,29 @@ uint32_t Reflect(uint32_t data, const uint8_t nBits)
 } // namespace
 
 uint32_t CalculateCrc32(
-    const uint8_t *crcDataPtr,
-    const uint32_t crcLength,
-    const bool reflectedOutput,
-    const bool reflectedInput)
+    const uint8_t *data,
+    const uint32_t length,
+    const bool reflected_output,
+    const bool reflected_input)
 {
-    uint32_t crcInitialValue = 0xFFFFFFFFU;
-    uint32_t crcXorValue = 0xFFFFFFFFU;
-
-    uint32_t ui32Counter;
     uint8_t temp;
-    uint32_t crc = crcInitialValue;
+    uint32_t crc = kCrcInitialValue;
 
-    for (ui32Counter = 0U; ui32Counter < crcLength; ++ui32Counter) {
-        if (reflectedInput) {
-            temp = Reflect(*crcDataPtr, 8U);
+    for (uint32_t i = 0U; i < length; ++i) {
+        if (reflected_input) {
+            temp = Reflect(*data, 8U);
         }
         else {
-            temp = *crcDataPtr;
+            temp = *data;
         }
 
-        crc = (crc << 8U) ^ kCrcTable[(uint8_t)((crc >> 24U) ^ temp)];
-        ++crcDataPtr;
+        crc = (crc << 8U) ^ kCrcTable[static_cast<uint8_t>((crc >> 24U) ^ temp)];
+        ++data;
     }
 
-    crc ^= crcXorValue;
+    crc ^= kCrcXorValue;
 
-    if (reflectedOutput) {
+    if (reflected_output) {
         crc = Reflect(crc, sizeof(uint32_t) * 8U);
     }
 

@@ -32,18 +32,18 @@
  *
  ****************************************************************************/
 
-#ifndef CRC32_H
-#define CRC32_H
+#ifndef CRC32_H_
+#define CRC32_H_
 
 #include <cstdint>
 
 namespace crc {
 
 uint32_t CalculateCrc32(
-    const uint8_t *crcDataPtr,
-    const uint32_t crcLength,
-    const bool reflectedOutput,
-    const bool reflectedInput);
+    const uint8_t *data,
+    const uint32_t length,
+    const bool reflected_output,
+    const bool reflected_input);
 
 } // namespace crc
-#endif // CRC32_H
+#endif // CRC32_H_
