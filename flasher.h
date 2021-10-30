@@ -32,8 +32,8 @@
  *
  ****************************************************************************/
 
-#ifndef FLASHER_H
-#define FLASHER_H
+#ifndef FLASHER_H_
+#define FLASHER_H_
 
 #include <QElapsedTimer>
 #include <QFile>
@@ -48,10 +48,10 @@ class Worker : public QObject
     Q_OBJECT
 
 public slots:
-    void doWork();
+    void DoWork();
 
 signals:
-    void flasherLoop();
+    void FlasherLoop();
 };
 QT_END_NAMESPACE
 
@@ -82,56 +82,54 @@ public:
     Flasher();
     ~Flasher();
 
-    void init();
-    bool startErase();
-    std::tuple<bool, QString, QString> startFlash();
-    bool crcCheck(const uint8_t* data, uint32_t size);
-    bool checkAck();
-    bool checkTrue();
     bool CollectBoardId();
+    bool Erase();
+    std::tuple<bool, QString, QString> Flash();
     bool GetBoardKey();
+    void Init();
     bool IsBootloaderDetected() const;
-    bool OpenFirmwareFile(const QString& filePath);
+    bool OpenFirmwareFile(const QString& file_path);
     bool SendEnterBootloaderCommand();
     void SendFlashCommand();
     void SetState(const FlasherStates& state);
-    bool sendEnableFirmwareProtection();
-    bool sendDisableFirmwareProtection();
+    bool SendEnableFirmwareProtection();
+    bool SendDisableFirmwareProtection();
     void TryToConnectConsole();
 
 signals:
-    void updateProgress(const qint64& dataPosition, const qint64& firmwareSize);
-    void clearProgress();
-    void showStatusMsg(const QString& text);
-    void failedToConnect();
-    void runLoop();
-    void textInBrowser(const QString& boardId);
-    void isBootloader(const bool& isBootloader);
-    void isReadProtectionEnabled(const bool& isEnabled);
-    void disableAllButtons();
-    void enableLoadButton();
-    void enableRegisterButton();
+    void UpdateProgress(const qint64& sent_size, const qint64& firmware_size);
+    void ClearProgress();
+    void ShowStatusMsg(const QString& text);
+    void FailedToConnect();
+    void RunLoop();
+    void ShowTextInBrowser(const QString &text);
+    void SetButtons(const bool& isBootloader);
+    void SetReadProtectionButtonText(const bool& isEnabled);
+    void DisableAllButtons();
+    void EnableLoadButton();
+    void EnableRegisterButton();
 
 public slots:
-    void loopHandler();
+    void LoopHandler();
 
 private:
-    QThread workerThread;
-    QFile m_fileFirmware;
-    QFile m_keysFile;
-
-    FlasherStates m_state {FlasherStates::kIdle};
-    bool m_isSecureBoot {true};
-    QString m_boardId;
-    QString m_boardKey;
-    QJsonObject m_jsonObject;
-
+    QString board_id_;
+    QString board_key_;
+    QFile firmware_file_;
     bool is_bootloader_ {false};
     bool is_bootloader_expected_ {false};
+    bool is_secure_boot_ {true};
     bool is_timer_started_ {false};
+    QJsonObject json_object_;
+    QFile keys_file_;
     communication::SerialPort serial_port_;
+    FlasherStates state_ {FlasherStates::kIdle};
     QElapsedTimer timer_;
+    QThread worker_thread_;
 
+    bool CheckAck();
+    bool CheckTrue();
+    bool CrcCheck(const uint8_t *data, const uint32_t size);
     bool GetBoardKeyFromServer();
     void GetVersion();
     bool IsFirmwareProtected();
@@ -144,4 +142,4 @@ private:
 };
 
 } // namespace flasher
-#endif // FLASHER_H
+#endif // FLASHER_H_
