@@ -50,8 +50,8 @@ int main(int argc, char *argv[])
 
     // Run console solution
     if (argc >= 2) {
-        QString actionString = argv[1];
-        QString filePath = argv[2];
+        QString action = argv[1];
+        QString file_path = argv[2];
 
         flasher->TryToConnectConsole();
 
@@ -66,20 +66,20 @@ int main(int argc, char *argv[])
 
                 if (flasher->GetBoardKey()) {
 
-                    if (0 == QString::compare("erase", actionString, Qt::CaseInsensitive)) {
+                    if (0 == QString::compare("erase", action, Qt::CaseInsensitive)) {
 
-                        if (flasher->startErase()) {
+                        if (flasher->Erase()) {
                             qInfo() << "Erase success";
 
                         } else {
                             qInfo() << "Erase error";
                         }
 
-                    } else if (0 == QString::compare("flash", actionString, Qt::CaseInsensitive)) {
+                    } else if (0 == QString::compare("flash", action, Qt::CaseInsensitive)) {
 
-                        if (flasher->OpenFirmwareFile(filePath)) {
+                        if (flasher->OpenFirmwareFile(file_path)) {
 
-                            std::tuple<bool, QString, QString> flashingInfo = flasher->startFlash();
+                            std::tuple<bool, QString, QString> flashingInfo = flasher->Flash();
 
                             if (std::get<0>(flashingInfo)) {
                                 qInfo() << "Flash success";
@@ -97,12 +97,10 @@ int main(int argc, char *argv[])
                     }
                 }
             }
-
         }
-
-    //Run GUI solution
+    // Run GUI solution
     } else {
-        flasher->init();
+        flasher->Init();
         window.show();
         app.exec();
     }

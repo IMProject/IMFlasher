@@ -65,25 +65,25 @@ MainWindow::MainWindow(std::shared_ptr<flasher::Flasher> flasher, QWidget *paren
     DisableAllButtons();
     ClearProgress();
 
-    connect(flasher_.get(), &flasher::Flasher::updateProgress, this, [&] (const qint64 &sent_size, const qint64 &firmware_size) {
+    connect(flasher_.get(), &flasher::Flasher::UpdateProgress, this, [&] (const qint64 &sent_size, const qint64 &firmware_size) {
         const int progress_percentage = (100 * sent_size) / firmware_size;
         ui_.progressBar->setValue(progress_percentage);
         qInfo() << sent_size << "/" << firmware_size << "B, " << progress_percentage << "%";
     });
 
-    connect(flasher_.get(), &flasher::Flasher::clearProgress, this, &MainWindow::ClearProgress);
+    connect(flasher_.get(), &flasher::Flasher::ClearProgress, this, &MainWindow::ClearProgress);
 
-    connect(flasher_.get(), &flasher::Flasher::showStatusMsg, this, [&] (const QString &text) { ShowStatusMessage(text); });
+    connect(flasher_.get(), &flasher::Flasher::ShowStatusMsg, this, [&] (const QString& text) { ShowStatusMessage(text); });
 
-    connect(flasher_.get(), &flasher::Flasher::failedToConnect, this, [&] (void) {
+    connect(flasher_.get(), &flasher::Flasher::FailedToConnect, this, [&] (void) {
         ShowStatusMessage(tr("Failed to connect!"));
         ui_.actionConnect->setEnabled(true);
         ui_.actionDisconnect->setEnabled(false);
     });
 
-    connect(flasher_.get(), &flasher::Flasher::textInBrowser, this, [&] (const auto& text) { ui_.textBrowser->append(text); });
+    connect(flasher_.get(), &flasher::Flasher::ShowTextInBrowser, this, [&] (const auto& text) { ui_.textBrowser->append(text); });
 
-    connect(flasher_.get(), &flasher::Flasher::isBootloader, this, [&] (const auto& is_bootloader)
+    connect(flasher_.get(), &flasher::Flasher::SetButtons, this, [&] (const auto& is_bootloader)
     {
         ui_.enterBootloader->setEnabled(true);
 
@@ -99,7 +99,7 @@ MainWindow::MainWindow(std::shared_ptr<flasher::Flasher> flasher, QWidget *paren
         }
     });
 
-    connect(flasher_.get(), &flasher::Flasher::isReadProtectionEnabled, this, [&] (const auto& is_enabled)
+    connect(flasher_.get(), &flasher::Flasher::SetReadProtectionButtonText, this, [&] (const auto& is_enabled)
     {
         is_read_protection_enabled_ = is_enabled;
         if (is_enabled) {
@@ -110,9 +110,9 @@ MainWindow::MainWindow(std::shared_ptr<flasher::Flasher> flasher, QWidget *paren
         }
     });
 
-    connect(flasher_.get(), &flasher::Flasher::disableAllButtons, this, &MainWindow::DisableAllButtons);
-    connect(flasher_.get(), &flasher::Flasher::enableLoadButton, this, [&] (void) { ui_.loadFirmware->setEnabled(true); });
-    connect(flasher_.get(), &flasher::Flasher::enableRegisterButton, this, [&] (void) { ui_.registerButton->setEnabled(true); });
+    connect(flasher_.get(), &flasher::Flasher::DisableAllButtons, this, &MainWindow::DisableAllButtons);
+    connect(flasher_.get(), &flasher::Flasher::EnableLoadButton, this, [&] (void) { ui_.loadFirmware->setEnabled(true); });
+    connect(flasher_.get(), &flasher::Flasher::EnableRegisterButton, this, [&] (void) { ui_.registerButton->setEnabled(true); });
 }
 
 MainWindow::~MainWindow() = default;
@@ -201,13 +201,13 @@ void MainWindow::on_enterBootloader_clicked()
 void MainWindow::on_protectButton_clicked()
 {
     if (!is_read_protection_enabled_) {
-        if (flasher_->sendEnableFirmwareProtection()) {
+        if (flasher_->SendEnableFirmwareProtection()) {
             flasher_->SetState(flasher::FlasherStates::kReconnect);
         }
     }
     else {
         if (ShowInfoMsg("Disable read protection", "Once disabled, complete flash will be erased including bootloader!")) {
-            if (flasher_->sendDisableFirmwareProtection()) {
+            if (flasher_->SendDisableFirmwareProtection()) {
                 ui_.protectButton->setEnabled(false);
             }
         }
