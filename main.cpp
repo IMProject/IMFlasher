@@ -36,6 +36,7 @@
 #include <QDebug>
 
 #include "flasher.h"
+#include "flashing_info.h"
 #include "mainwindow.h"
 #include "serial_port.h"
 
@@ -77,8 +78,8 @@ int main(int argc, char *argv[])
 
                     } else if (0 == QString::compare("flash", action, Qt::CaseInsensitive)) {
                         if (flasher->OpenFirmwareFile(file_path)) {
-                            std::tuple<bool, QString, QString> flashingInfo = flasher->Flash();
-                            qInfo() << std::get<2>(flashingInfo);
+                            flasher::FlashingInfo flashing_info = flasher->Flash();
+                            qInfo() << flashing_info.description;
                         }
                         else {
                             qInfo() << "Open firmware file error";
