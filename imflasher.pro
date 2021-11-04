@@ -15,6 +15,7 @@ SOURCES += \
 HEADERS += \
     crc32.h \
     flasher.h \
+    flashing_info.h \
     mainwindow.h \
     serial_port.h \
     socket.h

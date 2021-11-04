@@ -40,6 +40,7 @@
 #include <QJsonObject>
 #include <QThread>
 
+#include "flashing_info.h"
 #include "serial_port.h"
 
 QT_BEGIN_NAMESPACE
@@ -84,7 +85,7 @@ public:
 
     bool CollectBoardId();
     bool Erase();
-    std::tuple<bool, QString, QString> Flash();
+    FlashingInfo Flash();
     bool GetBoardKey();
     void Init();
     bool IsBootloaderDetected() const;

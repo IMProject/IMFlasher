@@ -248,11 +248,11 @@ void Flasher::LoopHandler()
 
     case FlasherStates::kFlash:
     {
-        std::tuple<bool, QString, QString> flashing_info = Flash();
-        ShowInfoMsg(std::get<1>(flashing_info), std::get<2>(flashing_info));
+        FlashingInfo flashing_info = Flash();
+        ShowInfoMsg(flashing_info.title, flashing_info.description);
         emit ClearProgress();
 
-        if (std::get<0>(flashing_info)) {
+        if (flashing_info.success) {
             serial_port_.CloseConn();
             SetState(FlasherStates::kTryToConnect);
         } else {
@@ -318,11 +318,9 @@ void Flasher::LoopHandler()
     emit RunLoop();
 }
 
-std::tuple<bool, QString, QString> Flasher::Flash()
+FlashingInfo Flasher::Flash()
 {
-    bool success = false;
-    QString title = "Unknown";
-    QString description = "Unknown";
+    FlashingInfo flashing_info;
     qint64 data_position = 0;
     QByteArray byte_array = firmware_file_.readAll();
 
@@ -333,110 +331,109 @@ std::tuple<bool, QString, QString> Flasher::Flash()
     const char *data_firmware = byte_array.data() + kSignatureSize;
 
     if (serial_port_.isOpen()) {
-        success = SendKey();
-        if (!success) {
-            title = "Error";
-            description = "Send key problem";
+        flashing_info.success = SendKey();
+        if (!flashing_info.success) {
+            flashing_info.title = "Error";
+            flashing_info.description = "Send key problem";
         }
     }
     else {
-        title = "Error";
-        description = "Serial port is not opened";
+        flashing_info.title = "Error";
+        flashing_info.description = "Serial port is not opened";
     }
 
-    if (success) {
-        success = SendMessage(kCheckSignatureCmd, sizeof(kCheckSignatureCmd), kSerialTimeoutInMs);
+    if (flashing_info.success) {
+        flashing_info.success = SendMessage(kCheckSignatureCmd, sizeof(kCheckSignatureCmd), kSerialTimeoutInMs);
 
-        if (!success) {
-            title = "Flashing process failed";
-            description = "Check signature problem";
+        if (!flashing_info.success) {
+            flashing_info.title = "Flashing process failed";
+            flashing_info.description = "Check signature problem";
         }
     }
 
-    if (success) {
-        success = SendMessage(data_signature, kSignatureSize, kSerialTimeoutInMs);
+    if (flashing_info.success) {
+        flashing_info.success = SendMessage(data_signature, kSignatureSize, kSerialTimeoutInMs);
 
-        if (!success) {
-            title = "Flashing process failed";
-            description = "Send signature problem";
+        if (!flashing_info.success) {
+            flashing_info.title = "Flashing process failed";
+            flashing_info.description = "Send signature problem";
         }
     }
 
-    if (success) {
-        success = SendMessage(kVerifyFlasherCmd, sizeof(kVerifyFlasherCmd), kSerialTimeoutInMs);
+    if (flashing_info.success) {
+        flashing_info.success = SendMessage(kVerifyFlasherCmd, sizeof(kVerifyFlasherCmd), kSerialTimeoutInMs);
 
-        if (!success) {
-            title = "Flashing process failed";
-            description = "Verify flasher problem";
+        if (!flashing_info.success) {
+            flashing_info.title = "Flashing process failed";
+            flashing_info.description = "Verify flasher problem";
         }
     }
 
-    if (success) {
+    if (flashing_info.success) {
         QByteArray file_size;
         file_size.setNum(firmware_size);
-        success = SendMessage(file_size, file_size.size(), kSerialTimeoutInMs);
+        flashing_info.success = SendMessage(file_size, file_size.size(), kSerialTimeoutInMs);
 
-        if (!success) {
-            title = "Flashing process failed";
-            description = "Send file size problem";
+        if (!flashing_info.success) {
+            flashing_info.title = "Flashing process failed";
+            flashing_info.description = "Send file size problem";
         }
     }
 
-    if (success) {
-        success = SendMessage(kEraseCmd, sizeof(kEraseCmd), kEraseTimeoutInMs);
+    if (flashing_info.success) {
+        flashing_info.success = SendMessage(kEraseCmd, sizeof(kEraseCmd), kEraseTimeoutInMs);
 
-        if (!success) {
-            title = "Flashing process failed";
-            description = "Erasing problem";
+        if (!flashing_info.success) {
+            flashing_info.title = "Flashing process failed";
+            flashing_info.description = "Erasing problem";
         }
     }
 
     // Send file in packages
-    if (success) {
+    if (flashing_info.success) {
         const qint64 packet_number = (firmware_size / kPacketSize);
         for (data_position = 0; data_position < packet_number; ++data_position) {
             const char *ptr_data_position;
             ptr_data_position = data_firmware + (data_position * kPacketSize);
             emit UpdateProgress((data_position + 1U) * kPacketSize, firmware_size);
-            success = SendMessage(ptr_data_position, kPacketSize, kSerialTimeoutInMs);
+            flashing_info.success = SendMessage(ptr_data_position, kPacketSize, kSerialTimeoutInMs);
 
-            if (!success) {
-                title = "Flashing process failed";
-                description = "Problem with flashing";
+            if (!flashing_info.success) {
+                flashing_info.title = "Flashing process failed";
+                flashing_info.description = "Problem with flashing";
                 break;
             }
         }
 
-        if (success) {
+        if (flashing_info.success) {
             const qint64 rest_size = firmware_size % kPacketSize;
 
             if (rest_size > 0) {
                 emit UpdateProgress(data_position * kPacketSize + rest_size, firmware_size);
-                success = SendMessage(data_firmware + (data_position * kPacketSize), rest_size, kSerialTimeoutInMs);
+                flashing_info.success = SendMessage(data_firmware + (data_position * kPacketSize), rest_size, kSerialTimeoutInMs);
 
-                if (!success) {
-                    title = "Flashing process failed";
-                    description = "Problem with flashing";
+                if (!flashing_info.success) {
+                    flashing_info.title = "Flashing process failed";
+                    flashing_info.description = "Problem with flashing";
                 }
             }
         }
 
-        if (success) {
-            qInfo() << "CRC";
-            success = CrcCheck((const uint8_t*) data_firmware, firmware_size);
+        if (flashing_info.success) {
+            flashing_info.success = CrcCheck((const uint8_t*) data_firmware, firmware_size);
 
-            if (success) {
-                title = "Flashing process done";
-                description = "Successful flashing process";
+            if (flashing_info.success) {
+                flashing_info.title = "Flashing process done";
+                flashing_info.description = "Successful flashing process";
 
             } else {
-                title = "Flashing process failed";
-                description = "CRC problem";
+                flashing_info.title = "Flashing process failed";
+                flashing_info.description = "CRC problem";
             }
         }
     }
 
-    return std::make_tuple(success, title, description);
+    return flashing_info;
 }
 
 bool Flasher::CheckAck()
