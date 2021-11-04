@@ -80,12 +80,14 @@ constexpr char kExitBlCmd[] = "exit_bl";
 constexpr char kCheckSignatureCmd[] = "check_signature";
 constexpr char kDisconnectCmd[] = "disconnect";
 
-void Deserialize32(const uint8_t* buf, uint32_t* value)
+uint32_t Deserialize32(const uint8_t *buf)
 {
-    *value = static_cast<uint32_t>(buf[0] << 24U);
-    *value |= static_cast<uint32_t>(buf[1] << 16U);
-    *value |= static_cast<uint32_t>(buf[2] << 8U);
-    *value |= static_cast<uint32_t>(buf[3] << 0U);
+    uint32_t result;
+    result = static_cast<uint32_t>(buf[0] << 24U);
+    result |= static_cast<uint32_t>(buf[1] << 16U);
+    result |= static_cast<uint32_t>(buf[2] << 8U);
+    result |= static_cast<uint32_t>(buf[3] << 0U);
+    return result;
 }
 
 void ShowInfoMsg(const QString& title, const QString& description)
@@ -166,7 +168,8 @@ void Flasher::LoopHandler()
 
         if (serial_port_.isOpen()) {
             if (is_bootloader_) {
-                is_disconnected_success = SendDisconnectCmd();
+                qInfo() << "Send disconnect command";
+                is_disconnected_success = SendMessage(kDisconnectCmd, sizeof(kDisconnectCmd), kSerialTimeoutInMs);
             }
             serial_port_.CloseConn();
         }
@@ -274,7 +277,8 @@ void Flasher::LoopHandler()
         break;
 
     case FlasherStates::kExitBootloader:
-        if (SendExitBootloaderCommand()) {
+        qInfo() << "Send exit bootloader command";
+        if (SendMessage(kExitBlCmd, sizeof(kExitBlCmd), kSerialTimeoutInMs)) {
             is_bootloader_expected_ = false;
             serial_port_.CloseConn();
             SetState(FlasherStates::kExitingBootloader);
@@ -325,8 +329,8 @@ std::tuple<bool, QString, QString> Flasher::Flash()
     firmware_file_.close();
     const qint64 firmware_size = firmware_file_.size() - kSignatureSize;
 
-    char *data_signature = byte_array.data();
-    char *data_firmware = byte_array.data() + kSignatureSize;
+    const char *data_signature = byte_array.data();
+    const char *data_firmware = byte_array.data() + kSignatureSize;
 
     if (serial_port_.isOpen()) {
         success = SendKey();
@@ -341,10 +345,7 @@ std::tuple<bool, QString, QString> Flasher::Flash()
     }
 
     if (success) {
-        qInfo() << "Check signature";
-        serial_port_.write(kCheckSignatureCmd, sizeof(kCheckSignatureCmd));
-        serial_port_.waitForReadyRead(kSerialTimeoutInMs);
-        success = CheckAck();
+        success = SendMessage(kCheckSignatureCmd, sizeof(kCheckSignatureCmd), kSerialTimeoutInMs);
 
         if (!success) {
             title = "Flashing process failed";
@@ -353,10 +354,7 @@ std::tuple<bool, QString, QString> Flasher::Flash()
     }
 
     if (success) {
-        qInfo() << "Send signature";
-        serial_port_.write(data_signature, kSignatureSize);
-        serial_port_.waitForReadyRead(kSerialTimeoutInMs);
-        success = CheckAck();
+        success = SendMessage(data_signature, kSignatureSize, kSerialTimeoutInMs);
 
         if (!success) {
             title = "Flashing process failed";
@@ -365,10 +363,7 @@ std::tuple<bool, QString, QString> Flasher::Flash()
     }
 
     if (success) {
-        qInfo() << "Verify flasher";
-        serial_port_.write(kVerifyFlasherCmd, sizeof(kVerifyFlasherCmd));
-        serial_port_.waitForReadyRead(kSerialTimeoutInMs);
-        success = CheckAck();
+        success = SendMessage(kVerifyFlasherCmd, sizeof(kVerifyFlasherCmd), kSerialTimeoutInMs);
 
         if (!success) {
             title = "Flashing process failed";
@@ -379,10 +374,7 @@ std::tuple<bool, QString, QString> Flasher::Flash()
     if (success) {
         QByteArray file_size;
         file_size.setNum(firmware_size);
-        qInfo() << "Send file size";
-        serial_port_.write(file_size);
-        serial_port_.waitForReadyRead(kSerialTimeoutInMs);
-        success = CheckAck();
+        success = SendMessage(file_size, file_size.size(), kSerialTimeoutInMs);
 
         if (!success) {
             title = "Flashing process failed";
@@ -391,10 +383,7 @@ std::tuple<bool, QString, QString> Flasher::Flash()
     }
 
     if (success) {
-        qInfo() << "Erase";
-        serial_port_.write(kEraseCmd, sizeof(kEraseCmd));
-        serial_port_.waitForReadyRead(kEraseTimeoutInMs);
-        success = CheckAck();
+        success = SendMessage(kEraseCmd, sizeof(kEraseCmd), kEraseTimeoutInMs);
 
         if (!success) {
             title = "Flashing process failed";
@@ -406,13 +395,10 @@ std::tuple<bool, QString, QString> Flasher::Flash()
     if (success) {
         const qint64 packet_number = (firmware_size / kPacketSize);
         for (data_position = 0; data_position < packet_number; ++data_position) {
-            char* ptr_data_position;
+            const char *ptr_data_position;
             ptr_data_position = data_firmware + (data_position * kPacketSize);
-
-            serial_port_.write(ptr_data_position, kPacketSize);
-            serial_port_.waitForReadyRead(kSerialTimeoutInMs);
             emit UpdateProgress((data_position + 1U) * kPacketSize, firmware_size);
-            success = CheckAck();
+            success = SendMessage(ptr_data_position, kPacketSize, kSerialTimeoutInMs);
 
             if (!success) {
                 title = "Flashing process failed";
@@ -425,10 +411,8 @@ std::tuple<bool, QString, QString> Flasher::Flash()
             const qint64 rest_size = firmware_size % kPacketSize;
 
             if (rest_size > 0) {
-                serial_port_.write(data_firmware + (data_position * kPacketSize), rest_size);
-                serial_port_.waitForReadyRead(kSerialTimeoutInMs);
                 emit UpdateProgress(data_position * kPacketSize + rest_size, firmware_size);
-                success = CheckAck();
+                success = SendMessage(data_firmware + (data_position * kPacketSize), rest_size, kSerialTimeoutInMs);
 
                 if (!success) {
                     title = "Flashing process failed";
@@ -498,10 +482,8 @@ bool Flasher::CrcCheck(const uint8_t *data, const uint32_t size)
     QByteArray crc_data;
     uint32_t crc = crc::CalculateCrc32(data, size, false, false);
     crc_data.setNum(crc);
-    serial_port_.write(crc_data);
-    serial_port_.waitForReadyRead(kSerialTimeoutInMs);
 
-    return CheckAck();
+    return SendMessage(crc_data, crc_data.size(), kSerialTimeoutInMs);
 }
 
 bool Flasher::CollectBoardId()
@@ -514,10 +496,8 @@ bool Flasher::CollectBoardId()
         QByteArray data = serial_port_.readAll();
         QByteArray board_id = data.left(kBoardIdSize);
         QByteArray data_crc = data.right(kCrc32Size);
-        uint32_t crc;
 
-        Deserialize32((uint8_t*)data_crc.data(), &crc);
-
+        uint32_t crc = Deserialize32((uint8_t*)data_crc.data());
         uint32_t calc_crc = crc::CalculateCrc32((uint8_t*)board_id.data(), static_cast<uint32_t>(kBoardIdSize), false, false);
 
         if ((board_id.size() == kBoardIdSize) && (calc_crc == crc)) {
@@ -538,12 +518,8 @@ bool Flasher::Erase()
     bool success = false;
 
     if (serial_port_.isOpen()) {
-
         if (SendKey()) {
-            qInfo() << "ERASE";
-            serial_port_.write(kEraseCmd, sizeof(kEraseCmd));
-            serial_port_.waitForReadyRead(kEraseTimeoutInMs);
-            success = CheckAck();
+            success = SendMessage(kEraseCmd, sizeof(kEraseCmd), kEraseTimeoutInMs);
         }
     }
 
@@ -655,28 +631,17 @@ void Flasher::SaveBoardKeyToFile()
     keys_file_.close();
 }
 
-bool Flasher::SendDisconnectCmd()
+bool Flasher::SendMessage(const char *data, qint64 length, int timeout_ms)
 {
-    qInfo() << "Send disconnect command";
-    serial_port_.write(kDisconnectCmd, sizeof(kDisconnectCmd));
-    serial_port_.waitForReadyRead(kSerialTimeoutInMs);
+    serial_port_.write(data, length);
+    serial_port_.waitForReadyRead(timeout_ms);
     return CheckAck();
 }
 
 bool Flasher::SendEnterBootloaderCommand()
 {
     qInfo() << "Send enter bl command";
-    serial_port_.write(kEnterBlCmd, sizeof(kEnterBlCmd));
-    serial_port_.waitForReadyRead(kSerialTimeoutInMs);
-    return CheckAck();
-}
-
-bool Flasher::SendExitBootloaderCommand()
-{
-    qInfo() << "Send exit bl command";
-    serial_port_.write(kExitBlCmd, sizeof(kExitBlCmd));
-    serial_port_.waitForReadyRead(kSerialTimeoutInMs);
-    return CheckAck();
+    return SendMessage(kEnterBlCmd, sizeof(kEnterBlCmd), kSerialTimeoutInMs);
 }
 
 void Flasher::SendFlashCommand()
@@ -691,11 +656,9 @@ bool Flasher::SendKey()
 {
     bool success = false;
     if (is_secure_boot_) {
-        qInfo() << "Key";
+        qInfo() << "Send key";
         QByteArray board_key = QByteArray::fromHex(board_key_.toUtf8());
-        serial_port_.write(board_key, board_key.size());
-        serial_port_.waitForReadyRead(kSerialTimeoutInMs);
-        success = CheckAck();
+        success = SendMessage(board_key, board_key.size(), kSerialTimeoutInMs);
     }
     else {
         success = true;
@@ -713,9 +676,7 @@ bool Flasher::SendEnableFirmwareProtection()
 {
     bool success;
     qInfo() << "Send enable firmware protected command";
-    serial_port_.write(kEnableFwProtectionCmd, sizeof(kEnableFwProtectionCmd));
-    serial_port_.waitForReadyRead(kSerialTimeoutInMs);
-    success = CheckAck();
+    success = SendMessage(kEnableFwProtectionCmd, sizeof(kEnableFwProtectionCmd), kSerialTimeoutInMs);
     ShowInfoMsg("Enable readout protection", "Powercyle the board!");
     return success;
 }
@@ -723,9 +684,7 @@ bool Flasher::SendEnableFirmwareProtection()
 bool Flasher::SendDisableFirmwareProtection()
 {
     qInfo() << "Send disable firmware protected command";
-    serial_port_.write(kDisableFwProtectionCmd, sizeof(kDisableFwProtectionCmd));
-    serial_port_.waitForReadyRead(kSerialTimeoutInMs);
-    return CheckAck();
+    return SendMessage(kDisableFwProtectionCmd, sizeof(kDisableFwProtectionCmd), kSerialTimeoutInMs);
 }
 
 void Flasher::TryToConnectConsole()
