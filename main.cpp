@@ -76,23 +76,15 @@ int main(int argc, char *argv[])
                         }
 
                     } else if (0 == QString::compare("flash", action, Qt::CaseInsensitive)) {
-
                         if (flasher->OpenFirmwareFile(file_path)) {
-
                             std::tuple<bool, QString, QString> flashingInfo = flasher->Flash();
-
-                            if (std::get<0>(flashingInfo)) {
-                                qInfo() << "Flash success";
-
-                            } else {
-                                qInfo() << "Flash error";
-                            }
-
-                        } else {
+                            qInfo() << std::get<2>(flashingInfo);
+                        }
+                        else {
                             qInfo() << "Open firmware file error";
                         }
-
-                    } else {
+                    }
+                    else {
                          qInfo() << "Select flash or erase";
                     }
                 }

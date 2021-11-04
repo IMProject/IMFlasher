@@ -135,9 +135,8 @@ private:
     bool IsFirmwareProtected();
     void ReconnectingToBoard();
     void SaveBoardKeyToFile();
-    bool SendDisconnectCmd();
-    bool SendExitBootloaderCommand();
     bool SendKey();
+    bool SendMessage(const char *data, qint64 length, int timeout_ms);
     void TryToConnect();
 };
 
