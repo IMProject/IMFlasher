@@ -2,3 +2,5 @@
 build/
 
 imflasher.pro.user
+
+*.autosave
