@@ -185,7 +185,7 @@ void MainWindow::on_loadFirmware_clicked()
 void MainWindow::on_registerButton_clicked()
 {
     ui_.registerButton->setEnabled(false);
-    flasher_->SetState(flasher::FlasherStates::kRegisterBoard);
+    flasher_->SetState(flasher::FlasherStates::kServerDataExchange);
 }
 
 void MainWindow::on_enterBootloader_clicked()

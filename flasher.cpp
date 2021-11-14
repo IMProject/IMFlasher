@@ -61,9 +61,6 @@ constexpr int kSerialTimeoutInMs {100};
 constexpr int kCollectBoardIdSerialTimeoutInMs {300};
 constexpr int kCrc32Size {4};
 constexpr int kBoardIdSize {32};
-constexpr int kBoardIdSizeString {kBoardIdSize * 2};
-constexpr int kKeySize {32};
-constexpr int kKeySizeString {kKeySize * 2};
 constexpr int kTryToConnectTimeoutInMs {20000};
 
 // Commands
@@ -101,21 +98,7 @@ void ShowInfoMsg(const QString& title, const QString& description)
 
 } // namespace
 
-Flasher::Flasher()
-{
-    const QString kKeyFileName = "keys.json";
-    keys_file_.setFileName(kKeyFileName);
-
-    if (keys_file_.open(QIODevice::ReadWrite)) {
-        QString keys_json = keys_file_.readAll();
-        keys_file_.close();
-
-        QJsonDocument json_data = QJsonDocument::fromJson(keys_json.toUtf8());
-        if (!json_data.isEmpty()) {
-            json_object_ = json_data.object();
-        }
-    }
-}
+Flasher::Flasher() = default;
 
 Flasher::~Flasher()
 {
@@ -188,15 +171,7 @@ void Flasher::LoopHandler()
     case FlasherStates::kCheckBoardInfo:
         if (CollectBoardId()) {
             emit ShowTextInBrowser("Board ID: " + board_id_);
-            if (GetBoardKey()) {
-                emit ShowTextInBrowser("Board verified!");
-                emit SetReadProtectionButtonText(IsFirmwareProtected());
-            }
-            else {
-                emit ShowTextInBrowser("Board is not registered! Press the register button");
-                emit EnableRegisterButton();
-            }
-
+            emit SetReadProtectionButtonText(IsFirmwareProtected());
             SetState(FlasherStates::kIdle);
         }
         else {
@@ -206,23 +181,9 @@ void Flasher::LoopHandler()
 
         break;
 
-    case FlasherStates::kRegisterBoard:
-        if (board_id_.size() != kBoardIdSizeString) {
+    case FlasherStates::kServerDataExchange:
+        if (board_id_.size() != kBoardIdSize) {
             emit ShowTextInBrowser("First connect board to get board id!");
-        }
-        else {
-            if (GetBoardKeyFromServer()) {
-                if (board_key_.size() != kKeySizeString) {
-                    emit ShowTextInBrowser("This Board ID is not verified. Check www.imsecure.xyz");
-                }
-                else {
-                    emit ShowTextInBrowser("Key: " + board_key_);
-                    SaveBoardKeyToFile();
-                }
-            }
-            else {
-                emit ShowTextInBrowser("Server error, please contact the administrator!");
-            }
         }
 
         SetState(FlasherStates::kIdle);
@@ -331,24 +292,16 @@ FlashingInfo Flasher::Flash()
     const char *data_firmware = byte_array.data() + kSignatureSize;
 
     if (serial_port_.isOpen()) {
-        flashing_info.success = SendKey();
-        if (!flashing_info.success) {
-            flashing_info.title = "Error";
-            flashing_info.description = "Send key problem";
-        }
-    }
-    else {
-        flashing_info.title = "Error";
-        flashing_info.description = "Serial port is not opened";
-    }
-
-    if (flashing_info.success) {
         flashing_info.success = SendMessage(kCheckSignatureCmd, sizeof(kCheckSignatureCmd), kSerialTimeoutInMs);
 
         if (!flashing_info.success) {
             flashing_info.title = "Flashing process failed";
             flashing_info.description = "Check signature problem";
         }
+
+    } else {
+        flashing_info.title = "Error";
+        flashing_info.description = "Serial port is not opened";
     }
 
     if (flashing_info.success) {
@@ -515,47 +468,7 @@ bool Flasher::Erase()
     bool success = false;
 
     if (serial_port_.isOpen()) {
-        if (SendKey()) {
-            success = SendMessage(kEraseCmd, sizeof(kEraseCmd), kEraseTimeoutInMs);
-        }
-    }
-
-    return success;
-}
-
-bool Flasher::GetBoardKey()
-{
-    bool success;
-    const QByteArray magic_string = "NOT_SECURED_MAGIC_STRING_1234567";
-
-    if (board_id_ != magic_string.toHex()) {
-        board_key_ = json_object_.value(board_id_).toString();
-
-        if (board_key_.size() == kKeySizeString) {
-            success = true;
-        }
-        else {
-            success = false;
-            qInfo() << "Board key error";
-        }
-
-    } else {
-        is_secure_boot_ = false;
-        success = true;
-    }
-
-    return success;
-}
-
-bool Flasher::GetBoardKeyFromServer()
-{
-    bool success = false;
-    QByteArray data_input = QByteArray::fromHex(board_id_.toUtf8());
-    QByteArray data_output;
-
-    if (socket::DataTransfer(data_input, data_output)) {
-        board_key_ = data_output.toHex();
-        success = true;
+        success = SendMessage(kEraseCmd, sizeof(kEraseCmd), kEraseTimeoutInMs);
     }
 
     return success;
@@ -614,20 +527,6 @@ void Flasher::ReconnectingToBoard()
     }
 }
 
-void Flasher::SaveBoardKeyToFile()
-{
-    QTextStream stream_config_file(&keys_file_);
-    keys_file_.open(QIODevice::ReadWrite);
-
-    QJsonDocument json_data;
-    json_object_.insert(board_id_, board_key_);
-
-    json_data.setObject(json_object_);
-
-    stream_config_file << json_data.toJson();
-    keys_file_.close();
-}
-
 bool Flasher::SendMessage(const char *data, qint64 length, int timeout_ms)
 {
     serial_port_.write(data, length);
@@ -647,21 +546,6 @@ void Flasher::SendFlashCommand()
     serial_port_.write(kFlashFwCmd, sizeof(kFlashFwCmd));
     serial_port_.waitForReadyRead(kSerialTimeoutInMs);
     // Check ack
-}
-
-bool Flasher::SendKey()
-{
-    bool success = false;
-    if (is_secure_boot_) {
-        qInfo() << "Send key";
-        QByteArray board_key = QByteArray::fromHex(board_key_.toUtf8());
-        success = SendMessage(board_key, board_key.size(), kSerialTimeoutInMs);
-    }
-    else {
-        success = true;
-    }
-
-    return success;
 }
 
 void Flasher::SetState(const FlasherStates& state)
