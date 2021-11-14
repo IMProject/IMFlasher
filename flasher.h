@@ -107,7 +107,6 @@ signals:
     void SetReadProtectionButtonText(const bool& isEnabled);
     void DisableAllButtons();
     void EnableLoadButton();
-    void EnableRegisterButton();
 
 public slots:
     void LoopHandler();
