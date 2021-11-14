@@ -65,29 +65,26 @@ int main(int argc, char *argv[])
         else {
             if (flasher->CollectBoardId()) {
 
-                if (flasher->GetBoardKey()) {
+                if (0 == QString::compare("erase", action, Qt::CaseInsensitive)) {
 
-                    if (0 == QString::compare("erase", action, Qt::CaseInsensitive)) {
+                    if (flasher->Erase()) {
+                        qInfo() << "Erase success";
 
-                        if (flasher->Erase()) {
-                            qInfo() << "Erase success";
+                    } else {
+                        qInfo() << "Erase error";
+                    }
 
-                        } else {
-                            qInfo() << "Erase error";
-                        }
-
-                    } else if (0 == QString::compare("flash", action, Qt::CaseInsensitive)) {
-                        if (flasher->OpenFirmwareFile(file_path)) {
-                            flasher::FlashingInfo flashing_info = flasher->Flash();
-                            qInfo() << flashing_info.description;
-                        }
-                        else {
-                            qInfo() << "Open firmware file error";
-                        }
+                } else if (0 == QString::compare("flash", action, Qt::CaseInsensitive)) {
+                    if (flasher->OpenFirmwareFile(file_path)) {
+                        flasher::FlashingInfo flashing_info = flasher->Flash();
+                        qInfo() << flashing_info.description;
                     }
                     else {
-                         qInfo() << "Select flash or erase";
+                        qInfo() << "Open firmware file error";
                     }
+                }
+                else {
+                    qInfo() << "Select flash or erase";
                 }
             }
         }

@@ -63,7 +63,7 @@ enum class FlasherStates {
     kTryToConnect,
     kConnected,
     kDisconnected,
-    kRegisterBoard,
+    kServerDataExchange,
     kSelectFirmware,
     kCheckBoardInfo,
     kFlash,
@@ -86,7 +86,6 @@ public:
     bool CollectBoardId();
     bool Erase();
     FlashingInfo Flash();
-    bool GetBoardKey();
     void Init();
     bool IsBootloaderDetected() const;
     bool OpenFirmwareFile(const QString& file_path);
@@ -115,14 +114,10 @@ public slots:
 
 private:
     QString board_id_;
-    QString board_key_;
     QFile firmware_file_;
     bool is_bootloader_ {false};
     bool is_bootloader_expected_ {false};
-    bool is_secure_boot_ {true};
     bool is_timer_started_ {false};
-    QJsonObject json_object_;
-    QFile keys_file_;
     communication::SerialPort serial_port_;
     FlasherStates state_ {FlasherStates::kIdle};
     QElapsedTimer timer_;
@@ -131,12 +126,9 @@ private:
     bool CheckAck();
     bool CheckTrue();
     bool CrcCheck(const uint8_t *data, const uint32_t size);
-    bool GetBoardKeyFromServer();
     void GetVersion();
     bool IsFirmwareProtected();
     void ReconnectingToBoard();
-    void SaveBoardKeyToFile();
-    bool SendKey();
     bool SendMessage(const char *data, qint64 length, int timeout_ms);
     void TryToConnect();
 };
