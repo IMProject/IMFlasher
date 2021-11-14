@@ -56,7 +56,6 @@ public:
 private slots:
     void on_selectFirmware_clicked();
     void on_loadFirmware_clicked();
-    void on_registerButton_clicked();
     void on_enterBootloader_clicked();
     void on_protectButton_clicked();
 

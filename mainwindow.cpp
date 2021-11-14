@@ -112,7 +112,6 @@ MainWindow::MainWindow(std::shared_ptr<flasher::Flasher> flasher, QWidget *paren
 
     connect(flasher_.get(), &flasher::Flasher::DisableAllButtons, this, &MainWindow::DisableAllButtons);
     connect(flasher_.get(), &flasher::Flasher::EnableLoadButton, this, [&] (void) { ui_.loadFirmware->setEnabled(true); });
-    connect(flasher_.get(), &flasher::Flasher::EnableRegisterButton, this, [&] (void) { ui_.registerButton->setEnabled(true); });
 }
 
 MainWindow::~MainWindow() = default;
@@ -129,7 +128,6 @@ void MainWindow::DisableAllButtons()
     ui_.selectFirmware->setEnabled(false);
     ui_.loadFirmware->setEnabled(false);
     ui_.protectButton->setEnabled(false);
-    ui_.registerButton->setEnabled(false);
 }
 
 void MainWindow::ConnectActions()
@@ -180,12 +178,6 @@ void MainWindow::on_loadFirmware_clicked()
     ui_.loadFirmware->setEnabled(false);
     ui_.progressBar->show();
     flasher_->SetState(flasher::FlasherStates::kFlash);
-}
-
-void MainWindow::on_registerButton_clicked()
-{
-    ui_.registerButton->setEnabled(false);
-    flasher_->SetState(flasher::FlasherStates::kServerDataExchange);
 }
 
 void MainWindow::on_enterBootloader_clicked()
