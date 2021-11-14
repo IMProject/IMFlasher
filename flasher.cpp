@@ -334,7 +334,7 @@ FlashingInfo Flasher::Flash()
     }
 
     if (flashing_info.success) {
-        flashing_info.success = SendMessage(kEraseCmd, sizeof(kEraseCmd), kEraseTimeoutInMs);
+        flashing_info.success = Erase();
 
         if (!flashing_info.success) {
             flashing_info.title = "Flashing process failed";
