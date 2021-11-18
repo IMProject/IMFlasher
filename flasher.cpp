@@ -289,14 +289,14 @@ void Flasher::LoopHandler()
 FlashingInfo Flasher::Flash()
 {
     FlashingInfo flashing_info;
-    qint64 data_position = 0;
-    QByteArray byte_array = firmware_file_.readAll();
-
+    QByteArray firmware_file = firmware_file_.readAll();
     firmware_file_.close();
-    const qint64 firmware_size = firmware_file_.size() - kSignatureSize;
 
-    const char *data_signature = byte_array.data();
-    const char *data_firmware = byte_array.data() + kSignatureSize;
+    const qint64 firmware_size = firmware_file_.size() - kSignatureSize;
+    const qint64 num_of_packets = (firmware_size / kPacketSize);
+
+    const char *data_signature = firmware_file.data();
+    const char *data_firmware = firmware_file.data() + kSignatureSize;
 
     if (serial_port_.isOpen()) {
         flashing_info.success = SendMessage(kCheckSignatureCmd, sizeof(kCheckSignatureCmd), kSerialTimeoutInMs);
@@ -332,7 +332,7 @@ FlashingInfo Flasher::Flash()
     if (flashing_info.success) {
         QByteArray file_size;
         file_size.setNum(firmware_size);
-        flashing_info.success = SendMessage(file_size, file_size.size(), kSerialTimeoutInMs);
+        flashing_info.success = SendMessage(file_size.data(), file_size.size(), kSerialTimeoutInMs);
 
         if (!flashing_info.success) {
             flashing_info.title = "Flashing process failed";
@@ -351,12 +351,10 @@ FlashingInfo Flasher::Flash()
 
     // Send file in packages
     if (flashing_info.success) {
-        const qint64 packet_number = (firmware_size / kPacketSize);
-        for (data_position = 0; data_position < packet_number; ++data_position) {
-            const char *ptr_data_position;
-            ptr_data_position = data_firmware + (data_position * kPacketSize);
-            emit UpdateProgress((data_position + 1U) * kPacketSize, firmware_size);
-            flashing_info.success = SendMessage(ptr_data_position, kPacketSize, kSerialTimeoutInMs);
+        for (qint64 packet = 0; packet < num_of_packets; ++packet) {
+            const char *data_position = data_firmware + (packet * kPacketSize);
+            emit UpdateProgress((packet + 1U) * kPacketSize, firmware_size);
+            flashing_info.success = SendMessage(data_position, kPacketSize, kSerialTimeoutInMs);
 
             if (!flashing_info.success) {
                 flashing_info.title = "Flashing process failed";
@@ -369,8 +367,8 @@ FlashingInfo Flasher::Flash()
             const qint64 rest_size = firmware_size % kPacketSize;
 
             if (rest_size > 0) {
-                emit UpdateProgress(data_position * kPacketSize + rest_size, firmware_size);
-                flashing_info.success = SendMessage(data_firmware + (data_position * kPacketSize), rest_size, kSerialTimeoutInMs);
+                emit UpdateProgress(num_of_packets * kPacketSize + rest_size, firmware_size);
+                flashing_info.success = SendMessage(data_firmware + (num_of_packets * kPacketSize), rest_size, kSerialTimeoutInMs);
 
                 if (!flashing_info.success) {
                     flashing_info.title = "Flashing process failed";
@@ -380,7 +378,7 @@ FlashingInfo Flasher::Flash()
         }
 
         if (flashing_info.success) {
-            flashing_info.success = CrcCheck((const uint8_t*) data_firmware, firmware_size);
+            flashing_info.success = CrcCheck(reinterpret_cast<const uint8_t*>(data_firmware), firmware_size);
 
             if (flashing_info.success) {
                 flashing_info.title = "Flashing process done";
@@ -440,7 +438,7 @@ bool Flasher::CrcCheck(const uint8_t *data, const uint32_t size)
     uint32_t crc = crc::CalculateCrc32(data, size, false, false);
     crc_data.setNum(crc);
 
-    return SendMessage(crc_data, crc_data.size(), kSerialTimeoutInMs);
+    return SendMessage(crc_data.data(), crc_data.size(), kSerialTimeoutInMs);
 }
 
 bool Flasher::CollectBoardId()
