@@ -440,24 +440,18 @@ bool Flasher::CollectBoardId()
 {
     bool success = false;
 
-    if (serial_port_.isOpen()) {
-        serial_port_.write(kBoardIdCmd, sizeof(kBoardIdCmd));
-        serial_port_.waitForReadyRead(kCollectBoardIdSerialTimeoutInMs);
-        QByteArray data = serial_port_.readAll();
-        QByteArray board_id = data.left(kBoardIdSize);
-        QByteArray data_crc = data.right(kCrc32Size);
+    QByteArray out_data;
+    if(ReadMessageWithCrc(kBoardIdCmd, sizeof(kBoardIdCmd), kCollectBoardIdSerialTimeoutInMs, out_data)) {
 
-        uint32_t crc = Deserialize32((uint8_t*)data_crc.data());
-        uint32_t calc_crc = crc::CalculateCrc32((uint8_t*)board_id.data(), static_cast<uint32_t>(kBoardIdSize), false, false);
-
-        if ((board_id.size() == kBoardIdSize) && (calc_crc == crc)) {
-            board_id_ = board_id.toHex();
+        if(out_data.size() == kBoardIdSize) {
+            board_id_ = out_data.toBase64();
             qInfo() << "Board ID: " << board_id_;
             success = true;
         }
-        else {
-            qInfo() << "Board id error";
-        }
+    }
+
+    if(!success) {
+        qInfo() << "Board id error";
     }
 
     return success;
@@ -532,6 +526,32 @@ bool Flasher::SendMessage(const char *data, qint64 length, int timeout_ms)
     serial_port_.write(data, length);
     serial_port_.waitForReadyRead(timeout_ms);
     return CheckAck();
+}
+
+bool Flasher::ReadMessageWithCrc(const char *data, qint64 length, int timeout_ms, QByteArray& out_data)
+{
+    bool success = false;
+
+    if (serial_port_.isOpen()) {
+        serial_port_.write(data, length);
+        serial_port_.waitForReadyRead(timeout_ms);
+        QByteArray data = serial_port_.readAll();
+        QByteArray data_crc = data.right(kCrc32Size);
+
+        if(data.size() > kCrc32Size) {
+
+            uint32_t out_data_size = data.size() - kCrc32Size;
+            uint32_t crc = Deserialize32(reinterpret_cast<uint8_t*>(data_crc.data()));
+            uint32_t calc_crc = crc::CalculateCrc32(reinterpret_cast<uint8_t*>(data.data()), out_data_size, false, false);
+
+            if (calc_crc == crc) {
+                out_data = data.left(out_data_size);
+                success = true;
+            }
+        }
+    }
+
+    return success;
 }
 
 bool Flasher::SendEnterBootloaderCommand()
