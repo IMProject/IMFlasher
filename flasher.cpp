@@ -67,6 +67,7 @@ constexpr int kTryToConnectTimeoutInMs {20000};
 constexpr char kVerifyFlasherCmd[] = "IMFlasher_Verify";
 constexpr char kEraseCmd[] = "erase";
 constexpr char kVersionCmd[] = "version";
+constexpr char kVersionJsonCmd[] = "version_json";
 constexpr char kBoardIdCmd[] = "board_id";
 constexpr char kFlashFwCmd[] = "flash_fw";
 constexpr char kEnterBlCmd[] = "enter_bl";
@@ -132,13 +133,19 @@ void Flasher::LoopHandler()
     case FlasherStates::kConnected:
         emit ShowStatusMsg("Connected");
         if (serial_port_.isOpen()) {
-            GetVersion();
             emit SetButtons(is_bootloader_);
 
             if (is_bootloader_) {
+                GetVersionJson(bl_version_);
+                if (bl_version_.empty()) {
+                    GetVersion();
+                }
                 SetState(FlasherStates::kCheckBoardInfo);
-            }
-            else {
+            } else {
+                GetVersionJson(fw_version_);
+                if (fw_version_.empty()) {
+                    GetVersion();
+                }
                 SetState(FlasherStates::kIdle);
             }
         }
@@ -473,6 +480,28 @@ void Flasher::GetVersion()
     serial_port_.write(kVersionCmd, sizeof(kVersionCmd));
     serial_port_.waitForReadyRead(kSerialTimeoutInMs);
     emit ShowTextInBrowser(serial_port_.readAll());
+}
+
+bool Flasher::GetVersionJson(QJsonObject& out_json_object)
+{
+    bool success = false;
+    QByteArray out_data;
+    if(ReadMessageWithCrc(kVersionJsonCmd, sizeof(kVersionJsonCmd), kSerialTimeoutInMs, out_data)) {
+        QJsonDocument out_json_document = QJsonDocument::fromJson(QString(out_data).toUtf8());
+        out_json_object = out_json_document.object();
+
+        QString git_info = "Git branch: ";
+        git_info.append(out_json_object.value("git_branch").toString());
+        git_info.append("\nGit hash: ");
+        git_info.append(out_json_object.value("git_hash").toString());
+        git_info.append("\nGit tag: ");
+        git_info.append(out_json_object.value("git_tag").toString());
+        emit ShowTextInBrowser(git_info);
+
+        success = true;
+    }
+
+    return success;
 }
 
 bool Flasher::IsBootloaderDetected() const
