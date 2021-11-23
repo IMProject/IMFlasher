@@ -39,7 +39,7 @@
 
 namespace socket {
 
-bool DataTransfer(const QByteArray &in_data, QByteArray &out_data);
+bool DataTransfer(const QByteArray& in_data, QByteArray& out_data);
 
 } // namespace socket
 #endif // SOCKET_H_

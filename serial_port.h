@@ -47,11 +47,11 @@ class SerialPort : public QSerialPort
     SerialPort();
     ~SerialPort();
     void CloseConn();
-    bool TryOpenPort(bool &is_bootloader);
+    bool TryOpenPort(bool& is_bootloader);
 
   private:
-    bool DetectBoard(bool &is_bootloader);
-    bool OpenConnection(const QString &port_name);
+    bool DetectBoard(bool& is_bootloader);
+    bool OpenConnection(const QString& port_name);
 };
 
 } // namespace communication

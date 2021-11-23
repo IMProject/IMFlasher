@@ -122,191 +122,191 @@ void Flasher::LoopHandler()
 {
     switch (state_) {
 
-    case FlasherStates::kIdle:
-        // Idle state
-        break;
+        case FlasherStates::kIdle:
+            // Idle state
+            break;
 
-    case FlasherStates::kTryToConnect:
-        TryToConnect();
-        break;
+        case FlasherStates::kTryToConnect:
+            TryToConnect();
+            break;
 
-    case FlasherStates::kConnected:
-        emit ShowStatusMsg("Connected");
-        if (serial_port_.isOpen()) {
-            emit SetButtons(is_bootloader_);
+        case FlasherStates::kConnected:
+            emit ShowStatusMsg("Connected");
+            if (serial_port_.isOpen()) {
+                emit SetButtons(is_bootloader_);
 
-            if (is_bootloader_) {
-                GetVersionJson(bl_version_);
-                if (bl_version_.empty()) {
-                    GetVersion();
+                if (is_bootloader_) {
+                    GetVersionJson(bl_version_);
+                    if (bl_version_.empty()) {
+                        GetVersion();
+                    }
+                    SetState(FlasherStates::kCheckBoardInfo);
+                } else {
+                    GetVersionJson(fw_version_);
+                    if (fw_version_.empty()) {
+                        GetVersion();
+                    }
+                    SetState(FlasherStates::kIdle);
                 }
-                SetState(FlasherStates::kCheckBoardInfo);
+            }
+            break;
+
+        case FlasherStates::kDisconnected:
+        {
+            bool is_disconnected_success = true;
+            is_timer_started_ = false;
+
+            if (serial_port_.isOpen()) {
+                if (is_bootloader_) {
+                    qInfo() << "Send disconnect command";
+                    is_disconnected_success = SendMessage(kDisconnectCmd, sizeof(kDisconnectCmd), kSerialTimeoutInMs);
+                }
+                serial_port_.CloseConn();
+            }
+
+            if (is_disconnected_success) {
+                emit ShowStatusMsg("Disconnected");
             } else {
-                GetVersionJson(fw_version_);
-                if (fw_version_.empty()) {
-                    GetVersion();
-                }
-                SetState(FlasherStates::kIdle);
+                emit ShowStatusMsg("Unplug board!");
             }
-        }
-        break;
 
-    case FlasherStates::kDisconnected:
-    {
-        bool is_disconnected_success = true;
-        is_timer_started_ = false;
-
-        if (serial_port_.isOpen()) {
-            if (is_bootloader_) {
-                qInfo() << "Send disconnect command";
-                is_disconnected_success = SendMessage(kDisconnectCmd, sizeof(kDisconnectCmd), kSerialTimeoutInMs);
-            }
-            serial_port_.CloseConn();
-        }
-
-        if (is_disconnected_success) {
-            emit ShowStatusMsg("Disconnected");
-        } else {
-            emit ShowStatusMsg("Unplug board!");
-        }
-
-        SetState(FlasherStates::kIdle);
-
-        break;
-    }
-
-    case FlasherStates::kCheckBoardInfo:
-        if (CollectBoardId()) {
-            emit ShowTextInBrowser("Board ID: " + board_id_);
-            is_read_protection_enabled_ = IsFirmwareProtected();
-            emit SetReadProtectionButtonText(is_read_protection_enabled_);
             SetState(FlasherStates::kIdle);
-        }
-        else {
-            emit ShowTextInBrowser("Board ID Error. Unplug your board, press disconnect/connect, and plug your board again.");
-            SetState(FlasherStates::kError);
+
+            break;
         }
 
-        break;
-
-    case FlasherStates::kServerDataExchange:
-        if (board_id_.size() != kBoardIdSize) {
-            emit ShowTextInBrowser("First connect board to get board id!");
-        }
-
-        SetState(FlasherStates::kIdle);
-        break;
-
-    case FlasherStates::kSelectFirmware:
-    {
-        QString file_path = QFileDialog::getOpenFileName(nullptr,
-                                                        tr("Firmware binary"),
-                                                        "",
-                                                        tr("Binary (*.bin);;All Files (*)"));
-
-        if (!file_path.isEmpty()) {
-            if (OpenFirmwareFile(file_path)) {
-                emit ShowTextInBrowser("Firmware: " + file_path);
-                emit EnableLoadButton();
-            }
-        }
-
-        SetState(FlasherStates::kIdle);
-        break;
-    }
-
-    case FlasherStates::kFlash:
-    {
-        FlashingInfo flashing_info = Flash();
-        ShowInfoMsg(flashing_info.title, flashing_info.description);
-        emit ClearProgress();
-
-        if (flashing_info.success) {
-            serial_port_.CloseConn();
-            SetState(FlasherStates::kTryToConnect);
-        } else {
-            SetState(FlasherStates::kError);
-        }
-        break;
-    }
-
-    case FlasherStates::kEnterBootloader:
-        if (!SendEnterBootloaderCommand()) {
-            SendFlashCommand();
-        }
-
-        is_bootloader_expected_ = true;
-        serial_port_.CloseConn();
-        SetState(FlasherStates::kEnteringBootloader);
-        break;
-
-    case FlasherStates::kEnteringBootloader:
-        emit ShowStatusMsg("Entering bootloader...");
-        ReconnectingToBoard();
-        break;
-
-    case FlasherStates::kExitBootloader:
-        qInfo() << "Send exit bootloader command";
-        if (SendMessage(kExitBlCmd, sizeof(kExitBlCmd), kSerialTimeoutInMs)) {
-            is_bootloader_expected_ = false;
-            serial_port_.CloseConn();
-            SetState(FlasherStates::kExitingBootloader);
-        }
-        else {
-            SetState(FlasherStates::kError);
-        }
-
-        break;
-
-    case FlasherStates::kExitingBootloader:
-        emit ShowStatusMsg("Exiting bootloader...");
-        ReconnectingToBoard();
-        break;
-
-    case FlasherStates::kReconnect:
-        emit DisableAllButtons();
-        serial_port_.CloseConn();
-
-        if (!serial_port_.isOpen()) {
-            SetState(FlasherStates::kTryToConnect);
-        }
-
-        break;
-
-    case FlasherStates::kEnableReadProtection:
-        qInfo() << "Send enable firmware protected command";
-        if (SendMessage(kEnableFwProtectionCmd, sizeof(kEnableFwProtectionCmd), kSerialTimeoutInMs)) {
-            ShowInfoMsg("Enable readout protection", "Powercyle the board!");
-            SetState(FlasherStates::kReconnect);
-        }
-        else {
-            SetState(FlasherStates::kError);
-        }
-        break;
-
-    case FlasherStates::kDisableReadProtection:
-        qInfo() << "Send disable firmware protected command";
-        if (ShowInfoMsg("Disable read protection", "Once disabled, complete flash will be erased including bootloader!")) {
-            if (SendMessage(kDisableFwProtectionCmd, sizeof(kDisableFwProtectionCmd), kSerialTimeoutInMs)) {
+        case FlasherStates::kCheckBoardInfo:
+            if (CollectBoardId()) {
+                emit ShowTextInBrowser("Board ID: " + board_id_);
+                is_read_protection_enabled_ = IsFirmwareProtected();
+                emit SetReadProtectionButtonText(is_read_protection_enabled_);
                 SetState(FlasherStates::kIdle);
+            }
+            else {
+                emit ShowTextInBrowser("Board ID Error. Unplug your board, press disconnect/connect, and plug your board again.");
+                SetState(FlasherStates::kError);
+            }
+
+            break;
+
+        case FlasherStates::kServerDataExchange:
+            if (board_id_.size() != kBoardIdSize) {
+                emit ShowTextInBrowser("First connect board to get board id!");
+            }
+
+            SetState(FlasherStates::kIdle);
+            break;
+
+        case FlasherStates::kSelectFirmware:
+        {
+            QString file_path = QFileDialog::getOpenFileName(nullptr,
+                                                             tr("Firmware binary"),
+                                                             "",
+                                                             tr("Binary (*.bin);;All Files (*)"));
+
+            if (!file_path.isEmpty()) {
+                if (OpenFirmwareFile(file_path)) {
+                    emit ShowTextInBrowser("Firmware: " + file_path);
+                    emit EnableLoadButton();
+                }
+            }
+
+            SetState(FlasherStates::kIdle);
+            break;
+        }
+
+        case FlasherStates::kFlash:
+        {
+            FlashingInfo flashing_info = Flash();
+            ShowInfoMsg(flashing_info.title, flashing_info.description);
+            emit ClearProgress();
+
+            if (flashing_info.success) {
+                serial_port_.CloseConn();
+                SetState(FlasherStates::kTryToConnect);
+            } else {
+                SetState(FlasherStates::kError);
+            }
+            break;
+        }
+
+        case FlasherStates::kEnterBootloader:
+            if (!SendEnterBootloaderCommand()) {
+                SendFlashCommand();
+            }
+
+            is_bootloader_expected_ = true;
+            serial_port_.CloseConn();
+            SetState(FlasherStates::kEnteringBootloader);
+            break;
+
+        case FlasherStates::kEnteringBootloader:
+            emit ShowStatusMsg("Entering bootloader...");
+            ReconnectingToBoard();
+            break;
+
+        case FlasherStates::kExitBootloader:
+            qInfo() << "Send exit bootloader command";
+            if (SendMessage(kExitBlCmd, sizeof(kExitBlCmd), kSerialTimeoutInMs)) {
+                is_bootloader_expected_ = false;
+                serial_port_.CloseConn();
+                SetState(FlasherStates::kExitingBootloader);
             }
             else {
                 SetState(FlasherStates::kError);
             }
-        }
-        else {
-            SetState(FlasherStates::kIdle);
-        }
-        break;
 
-    case FlasherStates::kError:
-        emit ShowStatusMsg("Error");
-        emit DisableAllButtons();
-        break;
+            break;
 
-    default:
-        qInfo() << "Unspecified state";
-        break;
+        case FlasherStates::kExitingBootloader:
+            emit ShowStatusMsg("Exiting bootloader...");
+            ReconnectingToBoard();
+            break;
+
+        case FlasherStates::kReconnect:
+            emit DisableAllButtons();
+            serial_port_.CloseConn();
+
+            if (!serial_port_.isOpen()) {
+                SetState(FlasherStates::kTryToConnect);
+            }
+
+            break;
+
+        case FlasherStates::kEnableReadProtection:
+            qInfo() << "Send enable firmware protected command";
+            if (SendMessage(kEnableFwProtectionCmd, sizeof(kEnableFwProtectionCmd), kSerialTimeoutInMs)) {
+                ShowInfoMsg("Enable readout protection", "Powercyle the board!");
+                SetState(FlasherStates::kReconnect);
+            }
+            else {
+                SetState(FlasherStates::kError);
+            }
+            break;
+
+        case FlasherStates::kDisableReadProtection:
+            qInfo() << "Send disable firmware protected command";
+            if (ShowInfoMsg("Disable read protection", "Once disabled, complete flash will be erased including bootloader!")) {
+                if (SendMessage(kDisableFwProtectionCmd, sizeof(kDisableFwProtectionCmd), kSerialTimeoutInMs)) {
+                    SetState(FlasherStates::kIdle);
+                }
+                else {
+                    SetState(FlasherStates::kError);
+                }
+            }
+            else {
+                SetState(FlasherStates::kIdle);
+            }
+            break;
+
+        case FlasherStates::kError:
+            emit ShowStatusMsg("Error");
+            emit DisableAllButtons();
+            break;
+
+        default:
+            qInfo() << "Unspecified state";
+            break;
     }
 
     worker_thread_.msleep(kThreadSleepTimeInMs);
@@ -405,7 +405,7 @@ FlashingInfo Flasher::Flash()
         }
 
         if (flashing_info.success) {
-            flashing_info.success = CrcCheck(reinterpret_cast<const uint8_t*>(data_firmware), firmware_size);
+            flashing_info.success = CrcCheck(reinterpret_cast<const uint8_t *>(data_firmware), firmware_size);
 
             if (flashing_info.success) {
                 flashing_info.title = "Flashing process done";
@@ -473,16 +473,16 @@ bool Flasher::CollectBoardId()
     bool success = false;
 
     QByteArray out_data;
-    if(ReadMessageWithCrc(kBoardIdCmd, sizeof(kBoardIdCmd), kCollectBoardIdSerialTimeoutInMs, out_data)) {
+    if (ReadMessageWithCrc(kBoardIdCmd, sizeof(kBoardIdCmd), kCollectBoardIdSerialTimeoutInMs, out_data)) {
 
-        if(out_data.size() == kBoardIdSize) {
+        if (out_data.size() == kBoardIdSize) {
             board_id_ = out_data.toBase64();
             qInfo() << "Board ID: " << board_id_;
             success = true;
         }
     }
 
-    if(!success) {
+    if (!success) {
         qInfo() << "Board id error";
     }
 
@@ -511,7 +511,7 @@ bool Flasher::GetVersionJson(QJsonObject& out_json_object)
 {
     bool success = false;
     QByteArray out_data;
-    if(ReadMessageWithCrc(kVersionJsonCmd, sizeof(kVersionJsonCmd), kSerialTimeoutInMs, out_data)) {
+    if (ReadMessageWithCrc(kVersionJsonCmd, sizeof(kVersionJsonCmd), kSerialTimeoutInMs, out_data)) {
         QJsonDocument out_json_document = QJsonDocument::fromJson(QString(out_data).toUtf8());
         out_json_object = out_json_document.object();
 
@@ -597,11 +597,11 @@ bool Flasher::ReadMessageWithCrc(const char *data, qint64 length, int timeout_ms
         QByteArray data = serial_port_.readAll();
         QByteArray data_crc = data.right(kCrc32Size);
 
-        if(data.size() > kCrc32Size) {
+        if (data.size() > kCrc32Size) {
 
             uint32_t out_data_size = data.size() - kCrc32Size;
-            uint32_t crc = Deserialize32(reinterpret_cast<uint8_t*>(data_crc.data()));
-            uint32_t calc_crc = crc::CalculateCrc32(reinterpret_cast<uint8_t*>(data.data()), out_data_size, false, false);
+            uint32_t crc = Deserialize32(reinterpret_cast<uint8_t *>(data_crc.data()));
+            uint32_t calc_crc = crc::CalculateCrc32(reinterpret_cast<uint8_t *>(data.data()), out_data_size, false, false);
 
             if (calc_crc == crc) {
                 out_data = data.left(out_data_size);

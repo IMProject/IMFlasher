@@ -88,8 +88,8 @@ int main(int argc, char *argv[])
                 }
             }
         }
-    // Run GUI solution
     } else {
+        // Run GUI solution
         flasher->Init();
         window.show();
         app.exec();

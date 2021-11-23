@@ -48,10 +48,10 @@ class Worker : public QObject
 {
     Q_OBJECT
 
-public slots:
+  public slots:
     void DoWork();
 
-signals:
+  signals:
     void FlasherLoop();
 };
 QT_END_NAMESPACE
@@ -81,7 +81,7 @@ class Flasher : public QObject
 {
     Q_OBJECT
 
-public:
+  public:
     Flasher();
     ~Flasher();
 
@@ -97,22 +97,22 @@ public:
     void SetState(const FlasherStates& state);
     void TryToConnectConsole();
 
-signals:
+  signals:
     void UpdateProgress(const qint64& sent_size, const qint64& firmware_size);
     void ClearProgress();
     void ShowStatusMsg(const QString& text);
     void FailedToConnect();
     void RunLoop();
-    void ShowTextInBrowser(const QString &text);
+    void ShowTextInBrowser(const QString& text);
     void SetButtons(const bool& isBootloader);
     void SetReadProtectionButtonText(const bool& isEnabled);
     void DisableAllButtons();
     void EnableLoadButton();
 
-public slots:
+  public slots:
     void LoopHandler();
 
-private:
+  private:
     QString board_id_;
     QJsonObject bl_version_;
     QJsonObject fw_version_;
