@@ -18,8 +18,11 @@ keep-one-line-blocks
 # Don't break complex statements and multiple statements residing on a single line.
 keep-one-line-statements
 
-# Attach a pointer or reference operator (*, &, or ^) to the variable name (right).
+# Attach a pointer operator (*) to the variable name (right).
 align-pointer=name
+
+# Attach a reference to the variable type.
+align-reference=type
 
 # Insert space padding after paren headers only (e.g. 'if', 'for', 'while'...).
 pad-header

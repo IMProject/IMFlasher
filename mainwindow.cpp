@@ -52,7 +52,7 @@ MainWindow::MainWindow(std::shared_ptr<flasher::Flasher> flasher, QWidget *paren
     DisableAllButtons();
     ClearProgress();
 
-    connect(flasher_.get(), &flasher::Flasher::UpdateProgress, this, [&] (const qint64 &sent_size, const qint64 &firmware_size) {
+    connect(flasher_.get(), &flasher::Flasher::UpdateProgress, this, [&] (const qint64& sent_size, const qint64& firmware_size) {
         const int progress_percentage = (100 * sent_size) / firmware_size;
         ui_.progressBar->setValue(progress_percentage);
         qInfo() << sent_size << "/" << firmware_size << "B, " << progress_percentage << "%";
@@ -62,7 +62,7 @@ MainWindow::MainWindow(std::shared_ptr<flasher::Flasher> flasher, QWidget *paren
 
     connect(flasher_.get(), &flasher::Flasher::ShowStatusMsg, this, [&] (const QString& text) { ShowStatusMessage(text); });
 
-    connect(flasher_.get(), &flasher::Flasher::FailedToConnect, this, [&] (void) {
+    connect(flasher_.get(), &flasher::Flasher::FailedToConnect, this, [&] {
         ShowStatusMessage(tr("Failed to connect!"));
         ui_.actionConnect->setEnabled(true);
         ui_.actionDisconnect->setEnabled(false);
@@ -97,7 +97,7 @@ MainWindow::MainWindow(std::shared_ptr<flasher::Flasher> flasher, QWidget *paren
     });
 
     connect(flasher_.get(), &flasher::Flasher::DisableAllButtons, this, &MainWindow::DisableAllButtons);
-    connect(flasher_.get(), &flasher::Flasher::EnableLoadButton, this, [&] (void) { ui_.loadFirmware->setEnabled(true); });
+    connect(flasher_.get(), &flasher::Flasher::EnableLoadButton, this, [&] { ui_.loadFirmware->setEnabled(true); });
 }
 
 MainWindow::~MainWindow() = default;
@@ -149,7 +149,7 @@ void MainWindow::InitActions()
     ui_.actionQuit->setEnabled(true);
 }
 
-void MainWindow::ShowStatusMessage(const QString &message)
+void MainWindow::ShowStatusMessage(const QString& message)
 {
     ui_.statusLabel->setText(message);
 }

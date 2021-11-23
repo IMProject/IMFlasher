@@ -46,7 +46,7 @@ constexpr char kShaKey[] = "NDQ4N2Y1YjFhZTg3ZGI3MTA1MjlhYmM3";
 
 } // namespace
 
-bool DataTransfer(const QByteArray &in_data, QByteArray &out_data)
+bool DataTransfer(const QByteArray& in_data, QByteArray& out_data)
 {
     bool success = false;
     QTcpSocket tcp_socket;

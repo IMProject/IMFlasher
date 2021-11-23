@@ -49,17 +49,17 @@ class MainWindow : public QMainWindow
 {
     Q_OBJECT
 
-public:
+  public:
     explicit MainWindow(std::shared_ptr<flasher::Flasher> flasher, QWidget *parent = nullptr);
     ~MainWindow();
 
-private slots:
+  private slots:
     void on_selectFirmware_clicked();
     void on_loadFirmware_clicked();
     void on_enterBootloader_clicked();
     void on_protectButton_clicked();
 
-private:
+  private:
     Ui::MainWindow ui_;
     std::shared_ptr<flasher::Flasher> flasher_;
 
@@ -67,7 +67,7 @@ private:
     void ClearProgress();
     void DisableAllButtons();
     void InitActions();
-    void ShowStatusMessage(const QString &message);
+    void ShowStatusMessage(const QString& message);
 };
 
 } // namespace gui

@@ -58,7 +58,7 @@ void SerialPort::CloseConn()
     }
 }
 
-bool SerialPort::DetectBoard(bool &is_bootloader)
+bool SerialPort::DetectBoard(bool& is_bootloader)
 {
     bool is_board_detected;
     write(kSoftwareTypeCmd, sizeof(kSoftwareTypeCmd));
@@ -80,7 +80,7 @@ bool SerialPort::DetectBoard(bool &is_bootloader)
     return is_board_detected;
 }
 
-bool SerialPort::OpenConnection(const QString &port_name)
+bool SerialPort::OpenConnection(const QString& port_name)
 {
     if (port_name.isEmpty()) return false;
 
@@ -95,10 +95,10 @@ bool SerialPort::OpenConnection(const QString &port_name)
     return open(QIODevice::ReadWrite);
 }
 
-bool SerialPort::TryOpenPort(bool &is_bootloader)
+bool SerialPort::TryOpenPort(bool& is_bootloader)
 {
-    const auto &infos = QSerialPortInfo::availablePorts();
-    for (const auto &info : infos) {
+    const auto& infos = QSerialPortInfo::availablePorts();
+    for (const auto& info : infos) {
         if (OpenConnection(info.portName())) {
             if (DetectBoard(is_bootloader)) return true;
             else CloseConn();
