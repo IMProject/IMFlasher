@@ -88,13 +88,13 @@ uint32_t Deserialize32(const uint8_t *buf)
     return result;
 }
 
-void ShowInfoMsg(const QString& title, const QString& description)
+bool ShowInfoMsg(const QString& title, const QString& description)
 {
     QMessageBox msg_box;
     msg_box.setText(title);
     msg_box.setInformativeText(description);
-    msg_box.setStandardButtons(QMessageBox::Ok);
-    msg_box.exec();
+    msg_box.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
+    return (msg_box.exec() == QMessageBox::Ok);
 }
 
 } // namespace
@@ -178,7 +178,8 @@ void Flasher::LoopHandler()
     case FlasherStates::kCheckBoardInfo:
         if (CollectBoardId()) {
             emit ShowTextInBrowser("Board ID: " + board_id_);
-            emit SetReadProtectionButtonText(IsFirmwareProtected());
+            is_read_protection_enabled_ = IsFirmwareProtected();
+            emit SetReadProtectionButtonText(is_read_protection_enabled_);
             SetState(FlasherStates::kIdle);
         }
         else {
@@ -270,6 +271,32 @@ void Flasher::LoopHandler()
             SetState(FlasherStates::kTryToConnect);
         }
 
+        break;
+
+    case FlasherStates::kEnableReadProtection:
+        qInfo() << "Send enable firmware protected command";
+        if (SendMessage(kEnableFwProtectionCmd, sizeof(kEnableFwProtectionCmd), kSerialTimeoutInMs)) {
+            ShowInfoMsg("Enable readout protection", "Powercyle the board!");
+            SetState(FlasherStates::kReconnect);
+        }
+        else {
+            SetState(FlasherStates::kError);
+        }
+        break;
+
+    case FlasherStates::kDisableReadProtection:
+        qInfo() << "Send disable firmware protected command";
+        if (ShowInfoMsg("Disable read protection", "Once disabled, complete flash will be erased including bootloader!")) {
+            if (SendMessage(kDisableFwProtectionCmd, sizeof(kDisableFwProtectionCmd), kSerialTimeoutInMs)) {
+                SetState(FlasherStates::kIdle);
+            }
+            else {
+                SetState(FlasherStates::kError);
+            }
+        }
+        else {
+            SetState(FlasherStates::kIdle);
+        }
         break;
 
     case FlasherStates::kError:
@@ -515,6 +542,11 @@ bool Flasher::IsFirmwareProtected()
     return CheckTrue();
 }
 
+bool Flasher::IsReadProtectionEnabled() const
+{
+    return is_read_protection_enabled_;
+}
+
 bool Flasher::OpenFirmwareFile(const QString& file_path)
 {
     firmware_file_.setFileName(file_path);
@@ -598,21 +630,6 @@ void Flasher::SendFlashCommand()
 void Flasher::SetState(const FlasherStates& state)
 {
     state_ = state;
-}
-
-bool Flasher::SendEnableFirmwareProtection()
-{
-    bool success;
-    qInfo() << "Send enable firmware protected command";
-    success = SendMessage(kEnableFwProtectionCmd, sizeof(kEnableFwProtectionCmd), kSerialTimeoutInMs);
-    ShowInfoMsg("Enable readout protection", "Powercyle the board!");
-    return success;
-}
-
-bool Flasher::SendDisableFirmwareProtection()
-{
-    qInfo() << "Send disable firmware protected command";
-    return SendMessage(kDisableFwProtectionCmd, sizeof(kDisableFwProtectionCmd), kSerialTimeoutInMs);
 }
 
 void Flasher::TryToConnectConsole()
