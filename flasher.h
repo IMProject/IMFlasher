@@ -72,6 +72,8 @@ enum class FlasherStates {
     kReconnect,
     kExitBootloader,
     kExitingBootloader,
+    kEnableReadProtection,
+    kDisableReadProtection,
     kError
 };
 
@@ -88,12 +90,11 @@ public:
     FlashingInfo Flash();
     void Init();
     bool IsBootloaderDetected() const;
+    bool IsReadProtectionEnabled() const;
     bool OpenFirmwareFile(const QString& file_path);
     bool SendEnterBootloaderCommand();
     void SendFlashCommand();
     void SetState(const FlasherStates& state);
-    bool SendEnableFirmwareProtection();
-    bool SendDisableFirmwareProtection();
     void TryToConnectConsole();
 
 signals:
@@ -118,6 +119,7 @@ private:
     QFile firmware_file_;
     bool is_bootloader_ {false};
     bool is_bootloader_expected_ {false};
+    bool is_read_protection_enabled_ {false};
     bool is_timer_started_ {false};
     communication::SerialPort serial_port_;
     FlasherStates state_ {FlasherStates::kIdle};

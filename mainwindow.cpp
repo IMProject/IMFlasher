@@ -40,19 +40,6 @@
 #include "flasher.h"
 
 namespace gui {
-namespace {
-
-bool ShowInfoMsg(const QString& title, const QString& description)
-{
-    QMessageBox msg_box;
-    msg_box.setText(title);
-    msg_box.setInformativeText(description);
-    msg_box.setStandardButtons(QMessageBox::Ok);
-    msg_box.addButton(QMessageBox::Cancel);
-    return (msg_box.exec() == QMessageBox::Ok);
-}
-
-} // namespace
 
 MainWindow::MainWindow(std::shared_ptr<flasher::Flasher> flasher, QWidget *parent) :
     QMainWindow(parent),
@@ -101,7 +88,6 @@ MainWindow::MainWindow(std::shared_ptr<flasher::Flasher> flasher, QWidget *paren
 
     connect(flasher_.get(), &flasher::Flasher::SetReadProtectionButtonText, this, [&] (const auto& is_enabled)
     {
-        is_read_protection_enabled_ = is_enabled;
         if (is_enabled) {
             ui_.protectButton->setText("Disable read protection");
         }
@@ -192,17 +178,11 @@ void MainWindow::on_enterBootloader_clicked()
 
 void MainWindow::on_protectButton_clicked()
 {
-    if (!is_read_protection_enabled_) {
-        if (flasher_->SendEnableFirmwareProtection()) {
-            flasher_->SetState(flasher::FlasherStates::kReconnect);
-        }
+    if (flasher_->IsReadProtectionEnabled()) {
+        flasher_->SetState(flasher::FlasherStates::kDisableReadProtection);
     }
     else {
-        if (ShowInfoMsg("Disable read protection", "Once disabled, complete flash will be erased including bootloader!")) {
-            if (flasher_->SendDisableFirmwareProtection()) {
-                ui_.protectButton->setEnabled(false);
-            }
-        }
+        flasher_->SetState(flasher::FlasherStates::kEnableReadProtection);
     }
 }
 

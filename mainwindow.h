@@ -62,7 +62,6 @@ private slots:
 private:
     Ui::MainWindow ui_;
     std::shared_ptr<flasher::Flasher> flasher_;
-    bool is_read_protection_enabled_ {false};
 
     void ConnectActions();
     void ClearProgress();
