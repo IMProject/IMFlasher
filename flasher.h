@@ -113,6 +113,8 @@ public slots:
 
 private:
     QString board_id_;
+    QJsonObject bl_version_;
+    QJsonObject fw_version_;
     QFile firmware_file_;
     bool is_bootloader_ {false};
     bool is_bootloader_expected_ {false};
@@ -126,6 +128,7 @@ private:
     bool CheckTrue();
     bool CrcCheck(const uint8_t *data, const uint32_t size);
     void GetVersion();
+    bool GetVersionJson(QJsonObject& out_json_object);
     bool IsFirmwareProtected();
     void ReconnectingToBoard();
     bool SendMessage(const char *data, qint64 length, int timeout_ms);
