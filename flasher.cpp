@@ -316,14 +316,14 @@ void Flasher::LoopHandler()
 FlashingInfo Flasher::Flash()
 {
     FlashingInfo flashing_info;
-    QByteArray firmware_file = firmware_file_.readAll();
+    QByteArray file_content = firmware_file_.readAll();
     firmware_file_.close();
 
     const qint64 firmware_size = firmware_file_.size() - kSignatureSize;
     const qint64 num_of_packets = (firmware_size / kPacketSize);
 
-    const char *data_signature = firmware_file.data();
-    const char *data_firmware = firmware_file.data() + kSignatureSize;
+    const char *data_signature = file_content.data();
+    const char *data_firmware = file_content.data() + kSignatureSize;
 
     if (serial_port_.isOpen()) {
         flashing_info.success = SendMessage(kCheckSignatureCmd, sizeof(kCheckSignatureCmd), kSerialTimeoutInMs);
