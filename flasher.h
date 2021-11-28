@@ -134,7 +134,7 @@ class Flasher : public QObject
     bool IsFirmwareProtected();
     void ReconnectingToBoard();
     bool SendMessage(const char *data, qint64 length, int timeout_ms);
-    bool ReadMessageWithCrc(const char *data, qint64 length, int timeout_ms, QByteArray& out_data);
+    bool ReadMessageWithCrc(const char *in_data, qint64 length, int timeout_ms, QByteArray& out_data);
     void TryToConnect();
 };
 
