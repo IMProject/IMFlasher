@@ -587,25 +587,34 @@ bool Flasher::SendMessage(const char *data, qint64 length, int timeout_ms)
     return CheckAck();
 }
 
-bool Flasher::ReadMessageWithCrc(const char *data, qint64 length, int timeout_ms, QByteArray& out_data)
+bool Flasher::ReadMessageWithCrc(const char *in_data, qint64 length, int timeout_ms, QByteArray& out_data)
 {
     bool success = false;
 
+    QElapsedTimer timer;
+    timer.start();
+
     if (serial_port_.isOpen()) {
-        serial_port_.write(data, length);
-        serial_port_.waitForReadyRead(timeout_ms);
-        QByteArray data = serial_port_.readAll();
-        QByteArray data_crc = data.right(kCrc32Size);
+        serial_port_.write(in_data, length);
 
-        if (data.size() > kCrc32Size) {
+        QByteArray data;
+        while (!timer.hasExpired(timeout_ms)) {
 
-            uint32_t out_data_size = data.size() - kCrc32Size;
-            uint32_t crc = Deserialize32(reinterpret_cast<uint8_t *>(data_crc.data()));
-            uint32_t calc_crc = crc::CalculateCrc32(reinterpret_cast<uint8_t *>(data.data()), out_data_size, false, false);
+            serial_port_.waitForReadyRead(kSerialTimeoutInMs);
+            data.append(serial_port_.readAll());
+            QByteArray data_crc = data.right(kCrc32Size);
 
-            if (calc_crc == crc) {
-                out_data = data.left(out_data_size);
-                success = true;
+            if (data.size() > kCrc32Size) {
+
+                uint32_t out_data_size = data.size() - kCrc32Size;
+                uint32_t crc = Deserialize32(reinterpret_cast<uint8_t *>(data_crc.data()));
+                uint32_t calc_crc = crc::CalculateCrc32(reinterpret_cast<uint8_t *>(data.data()), out_data_size, false, false);
+
+                if (calc_crc == crc) {
+                    out_data = data.left(out_data_size);
+                    success = true;
+                    break;
+                }
             }
         }
     }
