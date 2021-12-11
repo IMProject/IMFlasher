@@ -41,7 +41,6 @@
 #include <QMessageBox>
 
 #include "crc32.h"
-#include "socket.h"
 
 QT_BEGIN_NAMESPACE
 void Worker::DoWork()
@@ -59,6 +58,7 @@ constexpr qint64 kPacketSize {256};
 constexpr unsigned long kThreadSleepTimeInMs {100U};
 constexpr int kSerialTimeoutInMs {100};
 constexpr int kCollectBoardIdSerialTimeoutInMs {300};
+constexpr int kCollectBoardInfoSerialTimeoutInMs {300};
 constexpr int kCrc32Size {4};
 constexpr int kBoardIdSize {32};
 constexpr int kTryToConnectTimeoutInMs {20000};
@@ -69,6 +69,7 @@ constexpr char kEraseCmd[] = "erase";
 constexpr char kVersionCmd[] = "version";
 constexpr char kVersionJsonCmd[] = "version_json";
 constexpr char kBoardIdCmd[] = "board_id";
+constexpr char kBoardInfoJsonCmd[] = "board_info_json";
 constexpr char kFlashFwCmd[] = "flash_fw";
 constexpr char kEnterBlCmd[] = "enter_bl";
 constexpr char kIsFwProtectedCmd[] = "is_fw_protected";
@@ -176,11 +177,11 @@ void Flasher::LoopHandler()
         }
 
         case FlasherStates::kCheckBoardInfo:
-            if (CollectBoardId()) {
+            if (CollectBoardInfo() || CollectBoardId()) {
                 emit ShowTextInBrowser("Board ID: " + board_id_);
                 is_read_protection_enabled_ = IsFirmwareProtected();
                 emit SetReadProtectionButtonText(is_read_protection_enabled_);
-                SetState(FlasherStates::kIdle);
+                SetState(FlasherStates::kServerDataExchange);
             }
             else {
                 emit ShowTextInBrowser("Board ID Error. Unplug your board, press disconnect/connect, and plug your board again.");
@@ -190,8 +191,22 @@ void Flasher::LoopHandler()
             break;
 
         case FlasherStates::kServerDataExchange:
-            if (board_id_.size() != kBoardIdSize) {
-                emit ShowTextInBrowser("First connect board to get board id!");
+            if (!board_info_.empty()) {
+                if(socket_client_.SendBoardInfo(board_info_, bl_version_, fw_version_)) {
+                    if(socket_client_.ReceiveProductInfo(board_info_, product_info_)) {
+
+                        foreach (const QJsonValue &value, product_info_)
+                        {
+                            QJsonObject obj = value.toObject();
+                            QString firmware_download = "version: ";
+                            firmware_download.append(obj["fw_version"].toString());
+                            firmware_download.append(" url: ");
+                            firmware_download.append(obj["url"].toString());
+                            ShowTextInBrowser(firmware_download);
+                        }
+
+                    }
+                }
             }
 
             SetState(FlasherStates::kIdle);
@@ -489,6 +504,29 @@ bool Flasher::CollectBoardId()
     return success;
 }
 
+bool Flasher::CollectBoardInfo()
+{
+    bool success = false;
+
+    QByteArray out_data;
+    if(ReadMessageWithCrc(kBoardInfoJsonCmd, sizeof(kBoardInfoJsonCmd), kCollectBoardInfoSerialTimeoutInMs, out_data)) {
+        QJsonDocument json_document = QJsonDocument::fromJson(QString(out_data).toUtf8());
+        board_info_ = json_document.object();
+        if(!board_info_.empty()) {
+            board_id_ = board_info_.value("board_id").toString();
+            qInfo() << "Board ID: " << board_id_;
+            qInfo() << "manufacturer ID: " << board_info_.value("manufacturer_id").toString();
+            success = true;
+        }
+    }
+
+    if (!success) {
+        qInfo() << "Board info error";
+    }
+
+    return success;
+}
+
 bool Flasher::Erase()
 {
     bool success = false;
@@ -617,6 +655,7 @@ bool Flasher::ReadMessageWithCrc(const char *in_data, qint64 length, int timeout
                 }
             }
         }
+
     }
 
     return success;

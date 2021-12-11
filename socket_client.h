@@ -32,49 +32,64 @@
  *
  ****************************************************************************/
 
-#include "socket.h"
+#ifndef SOCKET_H_
+#define SOCKET_H_
 
-#include <QHostAddress>
-#include <QMessageAuthenticationCode>
+#include <QByteArray>
 #include <QTcpSocket>
+#include <QJsonObject>
+#include <QJsonArray>
 
 namespace socket {
-namespace {
 
-constexpr quint16 kPort {5322};
-constexpr char kShaKey[] = "NDQ4N2Y1YjFhZTg3ZGI3MTA1MjlhYmM3";
+namespace  {
 
-} // namespace
-
-bool DataTransfer(const QByteArray& in_data, QByteArray& out_data)
-{
-    bool success = false;
-    QTcpSocket tcp_socket;
-    QMessageAuthenticationCode code(QCryptographicHash::Sha256);
-    code.setKey(kShaKey);
-
-    tcp_socket.connectToHost(QHostAddress::LocalHost, kPort);
-
-    if (tcp_socket.waitForReadyRead()) {
-        QByteArray token = tcp_socket.readAll();
-        code.addData(token);
-
-        QByteArray hash = code.result();
-        tcp_socket.write(hash);
-
-        if (tcp_socket.waitForBytesWritten()) {
-            tcp_socket.write(in_data);
-
-            if (tcp_socket.waitForBytesWritten()) {
-                out_data = tcp_socket.readAll();
-                success = true;
-            }
-        }
-    }
-
-    tcp_socket.close();
-
-    return success;
+    const QString kHeaderClientBoardInfo{"header_client_board_info"};
+    const QString kHeaderClientProductInfo{"header_client_product_info"};
+    const QString kHeaderServerProductInfo{"header_server_product_info"};
 }
 
-} // namespace communication
+class SocketClient : public QTcpSocket
+{
+  public:
+    SocketClient();
+    virtual ~SocketClient();
+
+    /**
+     * Sending information about board to the server
+     *
+     * @param[in] board_info    Json object with board info for server
+     * @param[in] bl_version    Json object with bootlaoder git version
+     * @param[in] fw_version    Json object with firmware git version
+     */
+
+    virtual bool SendBoardInfo(QJsonObject board_info, QJsonObject bl_version, QJsonObject fw_version);
+
+    /**
+     * Receiving product info for given board info from the server
+     *
+     * @param[in] board_info    Json object with board info for server
+     * @param[out] product_info Json array with firmwares to download
+     */
+
+    virtual bool ReceiveProductInfo(QJsonObject board_info, QJsonArray& product_info);
+
+  private:
+    virtual bool Connect();
+    virtual bool Disconnect();
+    virtual bool Authentication();
+    virtual bool ReadAll(QByteArray &data_out);
+    virtual bool SendData(const QByteArray &in_data);
+    virtual bool CheckAck();
+
+    const quint16 kPort {5322};
+    const QByteArray kShaKey{"NDQ4N2Y1YjFhZTg3ZGI3MTA1MjlhYmM3"};
+
+    const QByteArray kACK{"ACK"};
+    const QByteArray kNACK{"NACK"};
+
+};
+
+} // namespace socket
+
+#endif // SOCKET_H_

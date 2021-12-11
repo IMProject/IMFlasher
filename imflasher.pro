@@ -10,7 +10,7 @@ SOURCES += \
     main.cpp \
     mainwindow.cpp \
     serial_port.cpp \
-    socket.cpp
+    socket_client.cpp
 
 HEADERS += \
     crc32.h \
@@ -18,7 +18,7 @@ HEADERS += \
     flashing_info.h \
     mainwindow.h \
     serial_port.h \
-    socket.h
+    socket_client.h
 
 FORMS += \
     mainwindow.ui

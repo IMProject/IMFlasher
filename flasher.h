@@ -42,6 +42,7 @@
 
 #include "flashing_info.h"
 #include "serial_port.h"
+#include "socket_client.h"
 
 QT_BEGIN_NAMESPACE
 class Worker : public QObject
@@ -86,6 +87,7 @@ class Flasher : public QObject
     ~Flasher();
 
     bool CollectBoardId();
+    bool CollectBoardInfo();
     bool Erase();
     FlashingInfo Flash();
     void Init();
@@ -114,14 +116,17 @@ class Flasher : public QObject
 
   private:
     QString board_id_;
+    QJsonObject board_info_;
     QJsonObject bl_version_;
     QJsonObject fw_version_;
+    QJsonArray product_info_;
     QFile firmware_file_;
     bool is_bootloader_ {false};
     bool is_bootloader_expected_ {false};
     bool is_read_protection_enabled_ {false};
     bool is_timer_started_ {false};
     communication::SerialPort serial_port_;
+    socket::SocketClient socket_client_;
     FlasherStates state_ {FlasherStates::kIdle};
     QElapsedTimer timer_;
     QThread worker_thread_;
@@ -136,6 +141,8 @@ class Flasher : public QObject
     bool SendMessage(const char *data, qint64 length, int timeout_ms);
     bool ReadMessageWithCrc(const char *in_data, qint64 length, int timeout_ms, QByteArray& out_data);
     void TryToConnect();
+
+    const QByteArray kFakeBoardId = "NOT_SECURED_MAGIC_STRING_1234567";
 };
 
 } // namespace flasher
