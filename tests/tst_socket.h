@@ -1,7 +1,7 @@
 #pragma once
 
 #include <QtTest>
-#include "../socket_client.h"
+#include "socket_client.h"
 
 class TestSocket : public QObject
 {
@@ -14,4 +14,6 @@ public:
 private slots:
     void TestSendBoardInfo();
     void TestReceiveProductType();
+    void TestReadFail();
+    void TestSendFail();
 };

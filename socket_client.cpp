@@ -40,8 +40,8 @@
 
 namespace socket {
 
-SocketClient::SocketClient() {}
-SocketClient::~SocketClient() {}
+SocketClient::SocketClient() = default;
+SocketClient::~SocketClient() = default;
 
 bool SocketClient::Connect()
 {
@@ -58,20 +58,11 @@ bool SocketClient::Connect()
 
 bool SocketClient::Disconnect()
 {
-    bool success = false;
-
-    SocketState socket_state = state();
-
-    if (socket_state == ConnectedState) {
+    if (state() == ConnectedState) {
         disconnectFromHost();
-        socket_state = state();
     }
 
-    if (socket_state != ConnectedState) {
-        success = true;
-    }
-
-    return success;
+    return (state() != ConnectedState);
 }
 
 bool SocketClient::Authentication()
@@ -94,9 +85,10 @@ bool SocketClient::Authentication()
 
 bool SocketClient::ReadAll(QByteArray& out_data)
 {
-    bool success = false;
-    success = waitForReadyRead();
-    out_data = readAll();
+    bool success = waitForReadyRead();
+    if (success) {
+        out_data = readAll();
+    }
     return success;
 }
 
@@ -129,9 +121,7 @@ bool SocketClient::CheckAck()
 
 bool SocketClient::SendBoardInfo(QJsonObject board_info, QJsonObject bl_version, QJsonObject fw_version)
 {
-    bool success = false;
-
-    success = Connect();
+    bool success = Connect();
 
     if (success) {
 
@@ -153,9 +143,7 @@ bool SocketClient::SendBoardInfo(QJsonObject board_info, QJsonObject bl_version,
 
 bool SocketClient::ReceiveProductInfo(QJsonObject board_info, QJsonArray& product_info)
 {
-    bool success = false;
-
-    success = Connect();
+    bool success = Connect();
 
     if (success) {
         QJsonObject packet_object;

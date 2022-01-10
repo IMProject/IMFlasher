@@ -1,65 +1,69 @@
 #include "tst_socket.h"
+
+#include <vector>
 #include <QMessageAuthenticationCode>
 
-using namespace socket;
-
-QHostAddress mock_address;
-quint16 mock_port;
-
-QByteArray read_all_data[10];
-QByteArray send_data[10];
-
-static uint8_t send_array_index = 0;
-static uint8_t read_array_index = 0;
-
-class MockSocket : public SocketClient
+class MockSocket_1 : public socket::SocketClient
 {
-    void connectToHost(const QHostAddress &address, quint16 port, OpenMode mode = ReadWrite) override;
-    bool waitForReadyRead(int msecs = 30000) override;
+public:
+    std::vector<QByteArray> read_data_;
+    std::vector<QByteArray> send_data_;
+private:
+    uint8_t read_array_index_ {0U};
+
     bool ReadAll(QByteArray &data_out) override;
     bool SendData(const QByteArray &in_data) override;
 };
 
-void MockSocket::connectToHost(const QHostAddress &address, quint16 port, OpenMode mode)
+bool MockSocket_1::ReadAll(QByteArray &data_out)
 {
-    mock_address = address;
-    mock_port = port;
-    mode = ReadWrite;
-}
-
-bool MockSocket::waitForReadyRead(int msecs)
-{
-    if(msecs) {}
+    data_out = read_data_.at(read_array_index_++);
     return true;
 }
 
-bool MockSocket::ReadAll(QByteArray &data_out)
+bool MockSocket_1::SendData(const QByteArray &in_data)
 {
-    data_out = read_all_data[read_array_index++];
+    send_data_.emplace_back(in_data);
     return true;
 }
 
-bool MockSocket::SendData(const QByteArray &in_data)
+class MockSocket_2 : public socket::SocketClient
 {
-    send_data[send_array_index++] = in_data;
+private:
+    bool ReadAll(QByteArray &data_out) override;
+};
+
+bool MockSocket_2::ReadAll(QByteArray &data_out)
+{
+    data_out = QByteArrayLiteral("ABCD");
+    return false;
+}
+
+class MockSocket_3 : public socket::SocketClient
+{
+private:
+    bool ReadAll(QByteArray &data_out) override;
+    bool SendData(const QByteArray &in_data) override;
+};
+
+bool MockSocket_3::ReadAll(QByteArray &data_out)
+{
+    data_out = QByteArrayLiteral("ABCD");
     return true;
 }
 
-TestSocket::TestSocket()
+bool MockSocket_3::SendData(const QByteArray &in_data)
 {
+    QByteArray test = in_data;
+    return false;
 }
 
-TestSocket::~TestSocket()
-{
-}
+TestSocket::TestSocket() = default;
+TestSocket::~TestSocket() = default;
 
 void TestSocket::TestSendBoardInfo()
 {
-    MockSocket socket;
-    //Socket socket;
-
-    send_array_index = 0;
-    read_array_index = 0;
+    MockSocket_1 socket;
 
     QString bl_git_branch = "master";
     QString bl_git_hash = "be387ad0b2ba6dc0877e8e255e872ee310a9127c";
@@ -89,17 +93,17 @@ void TestSocket::TestSendBoardInfo()
     tx_json_board_info.insert("product_type", product_type);
 
     QByteArray token = "ABCD";
-    read_all_data[0] = token;
+    socket.read_data_.emplace_back(token);
 
     bool success = socket.SendBoardInfo(tx_json_board_info, tx_json_bl_version, tx_json_fw_version);
     QVERIFY2(success, "Send board data failed");
 
-    QVERIFY2(send_data[0].toHex() == "f7e39d16c639f50c8e4882502c10697add67f1eef119b6acb60d1a224e3d4300", "Hash");
+    QVERIFY2(socket.send_data_.at(0).toHex() == "f7e39d16c639f50c8e4882502c10697add67f1eef119b6acb60d1a224e3d4300", "Hash");
 
-    QJsonDocument json_data = QJsonDocument::fromJson(send_data[1]);
+    QJsonDocument json_data = QJsonDocument::fromJson(socket.send_data_.at(1));
     QJsonObject packet_object = json_data.object();
 
-    QVERIFY2(packet_object.value("header") == kHeaderClientBoardInfo, "Sending board data header failed");
+    QVERIFY2(packet_object.value("header") == socket::kHeaderClientBoardInfo, "Sending board data header failed");
 
     QJsonObject rx_json_board_info = packet_object.value("board_info").toObject();
     QVERIFY2(rx_json_board_info.value("board_id") == board_id, "Sending board id failed");
@@ -121,11 +125,7 @@ void TestSocket::TestSendBoardInfo()
 
 void TestSocket::TestReceiveProductType()
 {
-    MockSocket socket;
-    //SocketClient socket;
-
-    send_array_index = 0;
-    read_array_index = 0;
+    MockSocket_1 socket;
 
     QString board_id = "test_board_id";
     QString manufacturer_id = "test_manufacturer_id";
@@ -135,7 +135,6 @@ void TestSocket::TestReceiveProductType()
     tx_json_board_info.insert("board_id", board_id);
     tx_json_board_info.insert("manufacturer_id", manufacturer_id);
     tx_json_board_info.insert("product_type", product_type);
-
 
     QJsonArray json_array;
 
@@ -154,45 +153,95 @@ void TestSocket::TestReceiveProductType()
     json_array.append(object2);
 
     QJsonObject rx_packet_object;
-    rx_packet_object.insert("header", kHeaderServerProductInfo);
+    rx_packet_object.insert("header", socket::kHeaderServerProductInfo);
     rx_packet_object.insert("product_info", json_array);
 
     QJsonDocument json_data;
     json_data.setObject(rx_packet_object);
-    read_all_data[1] = json_data.toJson();
 
     QByteArray token = "ABCD";
-    read_all_data[0] = token;
+    socket.read_data_.emplace_back(token);
+    socket.read_data_.emplace_back(json_data.toJson());
 
     QJsonArray rx_product_info;
     bool success = socket.ReceiveProductInfo(tx_json_board_info, rx_product_info);
     QVERIFY2(success, "Receive product info failed");
 
-    json_data = QJsonDocument::fromJson(send_data[1]);
+    json_data = QJsonDocument::fromJson(socket.send_data_.at(1));
     QJsonObject packet_object = json_data.object();
 
-    QVERIFY2(packet_object.value("header").toString() == kHeaderClientProductInfo, "Sending board data header failed");
+    QVERIFY2(packet_object.value("header").toString() == socket::kHeaderClientProductInfo, "Sending board data header failed");
 
     QJsonObject rx_json_board_info = packet_object.value("board_info").toObject();
     QVERIFY2(rx_json_board_info.value("board_id") == board_id, "Sending board id failed");
     QVERIFY2(rx_json_board_info.value("manufacturer_id") == manufacturer_id, "Sending owner id failed");
     QVERIFY2(rx_json_board_info.value("product_type") == product_type, "Sending product type failed");
 
-    QString fw_version_test[10];
-    QString url_test[10];
+    std::vector<QString> fw_version_test;
+    std::vector<QString> url_test;
     foreach (const QJsonValue &value, rx_product_info)
     {
-        static uint32_t index = 0;
         QJsonObject obj = value.toObject();
-        fw_version_test[index] = obj["fw_version"].toString();
-        url_test[index] = obj["url"].toString();
-        index++;
+        fw_version_test.emplace_back(obj["fw_version"].toString());
+        url_test.emplace_back(obj["url"].toString());
     }
 
-    QVERIFY(fw_version_test[0] == fw_version_1);
-    QVERIFY(fw_version_test[1] == fw_version_2);
-    QVERIFY(url_test[0] == url_1);
-    QVERIFY(url_test[1] == url_2);
+    QVERIFY(fw_version_test.at(0) == fw_version_1);
+    QVERIFY(fw_version_test.at(1) == fw_version_2);
+    QVERIFY(url_test.at(0) == url_1);
+    QVERIFY(url_test.at(1) == url_2);
 }
 
+void TestSocket::TestReadFail()
+{
+    MockSocket_2 socket;
 
+    QString bl_git_branch = "master";
+    QString bl_git_hash = "be387ad0b2ba6dc0877e8e255e872ee310a9127c";
+    QString bl_git_tag = "v1.1.0";
+
+    QJsonObject tx_json_bl_version;
+    tx_json_bl_version.insert("git_branch", bl_git_branch);
+    tx_json_bl_version.insert("git_hash", bl_git_hash);
+    tx_json_bl_version.insert("git_tag", bl_git_tag);
+
+    QString fw_git_branch = "development";
+    QString fw_git_hash = "877e8e255e872ee310a9127cbe387ad0b2ba6dc0";
+    QString fw_git_tag = "v2.1.0";
+
+    QJsonObject tx_json_fw_version;
+    tx_json_fw_version.insert("git_branch", fw_git_branch);
+    tx_json_fw_version.insert("git_hash", fw_git_hash);
+    tx_json_fw_version.insert("git_tag", fw_git_tag);
+
+    QString board_id = "test_board_id";
+    QString manufacturer_id = "test_manufacturer_id";
+    QString product_type = "test_product_type";
+
+    QJsonObject tx_json_board_info;
+    tx_json_board_info.insert("board_id", board_id);
+    tx_json_board_info.insert("manufacturer_id", manufacturer_id);
+    tx_json_board_info.insert("product_type", product_type);
+
+    bool success = socket.SendBoardInfo(tx_json_board_info, tx_json_bl_version, tx_json_fw_version);
+    QVERIFY2(!success, "Read data did not fail");
+}
+
+void TestSocket::TestSendFail()
+{
+    MockSocket_3 socket;
+
+    QString board_id = "test_board_id";
+    QString manufacturer_id = "test_manufacturer_id";
+    QString product_type = "test_product_type";
+
+    QJsonObject tx_json_board_info;
+    tx_json_board_info.insert("board_id", board_id);
+    tx_json_board_info.insert("manufacturer_id", manufacturer_id);
+    tx_json_board_info.insert("product_type", product_type);
+
+    QJsonArray rx_product_info;
+
+    bool success = socket.ReceiveProductInfo(tx_json_board_info, rx_product_info);
+    QVERIFY2(!success, "Send data did not fail");
+}
