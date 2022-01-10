@@ -6,6 +6,8 @@ CONFIG -= app_bundle
 
 TEMPLATE = app
 
+INCLUDEPATH += ../
+
 SOURCES +=  tst_socket.cpp \
     main.cpp \
     ../socket_client.cpp
