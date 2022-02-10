@@ -41,6 +41,7 @@
 #include <QMessageBox>
 
 #include "crc32.h"
+#include "socket_client.h"
 
 QT_BEGIN_NAMESPACE
 void Worker::DoWork()
@@ -79,6 +80,13 @@ constexpr char kExitBlCmd[] = "exit_bl";
 constexpr char kCheckSignatureCmd[] = "check_signature";
 constexpr char kDisconnectCmd[] = "disconnect";
 
+constexpr char kConfigFileName[] = "config.json";
+constexpr char kFakeBoardIdBase64[] = "Tk9UX1NFQ1VSRURfTUFHSUNfU1RSSU5HXzEyMzQ1Njc="; // NOT_SECURED_MAGIC_STRING_1234567
+
+constexpr char kDefaultAddress[] = "141.144.224.68";
+constexpr int kDefaultPort = 5322;
+constexpr char kDefaultKey[] = "NDQ4N2Y1YjFhZTg3ZGI3MTA1MjlhYmM3";
+
 uint32_t Deserialize32(const uint8_t *buf)
 {
     uint32_t result;
@@ -110,6 +118,17 @@ Flasher::~Flasher()
 
 void Flasher::Init()
 {
+    QJsonDocument json_document;
+    if (OpenConfigFile(json_document)) {
+        QJsonObject json_object_server = json_document.object().find("server")->toObject();
+
+        socket_client_ = std::make_shared<socket::SocketClient>(
+                             json_object_server.find("address")->toString(),
+                             json_object_server.find("port")->toInt(),
+                             json_object_server.find("preshared_key")->toString()
+                         );
+    }
+
     Worker *worker = new Worker;
     worker->moveToThread(&worker_thread_);
     connect(&worker_thread_, &QThread::finished, worker, &QObject::deleteLater);
@@ -181,7 +200,12 @@ void Flasher::LoopHandler()
                 emit ShowTextInBrowser("Board ID: " + board_id_);
                 is_read_protection_enabled_ = IsFirmwareProtected();
                 emit SetReadProtectionButtonText(is_read_protection_enabled_);
-                SetState(FlasherStates::kServerDataExchange);
+
+                if (0 == QString::compare(kFakeBoardIdBase64, board_id_, Qt::CaseInsensitive)) {
+                    SetState(FlasherStates::kIdle);
+                } else {
+                    SetState(FlasherStates::kServerDataExchange);
+                }
             }
             else {
                 emit ShowTextInBrowser("Board ID Error. Unplug your board, press disconnect/connect, and plug your board again.");
@@ -191,9 +215,9 @@ void Flasher::LoopHandler()
             break;
 
         case FlasherStates::kServerDataExchange:
-            if (!board_info_.empty()) {
-                if(socket_client_.SendBoardInfo(board_info_, bl_version_, fw_version_)) {
-                    if(socket_client_.ReceiveProductInfo(board_info_, product_info_)) {
+            if (!board_info_.empty() && socket_client_) {
+                if (socket_client_->SendBoardInfo(board_info_, bl_version_, fw_version_)) {
+                    if (socket_client_->ReceiveProductInfo(board_info_, product_info_)) {
 
                         foreach (const QJsonValue &value, product_info_)
                         {
@@ -202,9 +226,8 @@ void Flasher::LoopHandler()
                             firmware_download.append(obj["fw_version"].toString());
                             firmware_download.append(" url: ");
                             firmware_download.append(obj["url"].toString());
-                            ShowTextInBrowser(firmware_download);
+                            emit ShowTextInBrowser(firmware_download);
                         }
-
                     }
                 }
             }
@@ -509,10 +532,10 @@ bool Flasher::CollectBoardInfo()
     bool success = false;
 
     QByteArray out_data;
-    if(ReadMessageWithCrc(kBoardInfoJsonCmd, sizeof(kBoardInfoJsonCmd), kCollectBoardInfoSerialTimeoutInMs, out_data)) {
+    if (ReadMessageWithCrc(kBoardInfoJsonCmd, sizeof(kBoardInfoJsonCmd), kCollectBoardInfoSerialTimeoutInMs, out_data)) {
         QJsonDocument json_document = QJsonDocument::fromJson(QString(out_data).toUtf8());
         board_info_ = json_document.object();
-        if(!board_info_.empty()) {
+        if (!board_info_.empty()) {
             board_id_ = board_info_.value("board_id").toString();
             qInfo() << "Board ID: " << board_id_;
             qInfo() << "manufacturer ID: " << board_info_.value("manufacturer_id").toString();
@@ -720,6 +743,47 @@ void Flasher::TryToConnect()
         emit DisableAllButtons();
         is_timer_started_ = true;
         timer_.start();
+    }
+}
+
+bool Flasher::OpenConfigFile(QJsonDocument& json_document)
+{
+    bool success = false;
+    config_file_.setFileName(kConfigFileName);
+
+    if (!config_file_.exists()) {
+        CreateDefaultConfigFile();
+    }
+
+    if (config_file_.open(QIODevice::ReadOnly)) {
+        QString json_string = config_file_.readAll();
+        config_file_.close();
+        json_document = QJsonDocument::fromJson(json_string.toUtf8());
+        if (!json_document.isEmpty()) {
+            success = true;
+        }
+    }
+
+    return success;
+}
+
+void Flasher::CreateDefaultConfigFile()
+{
+    QTextStream stream_config_file(&config_file_);
+    if (config_file_.open(QIODevice::WriteOnly)) {
+
+        QJsonDocument json_data;
+        QJsonObject json_object;
+        QJsonObject json_object_server;
+
+        json_object_server.insert("address", kDefaultAddress);
+        json_object_server.insert("port", kDefaultPort);
+        json_object_server.insert("preshared_key", kDefaultKey);
+        json_object.insert("server", json_object_server);
+
+        json_data.setObject(json_object);
+        stream_config_file << json_data.toJson();
+        config_file_.close();
     }
 }
 

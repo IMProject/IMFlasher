@@ -38,11 +38,18 @@
 #include <QElapsedTimer>
 #include <QFile>
 #include <QJsonObject>
+#include <QJsonArray>
 #include <QThread>
+#include <QFile>
 
 #include "flashing_info.h"
 #include "serial_port.h"
-#include "socket_client.h"
+
+namespace socket {
+
+class SocketClient;
+
+} // namespace socket
 
 QT_BEGIN_NAMESPACE
 class Worker : public QObject
@@ -120,13 +127,14 @@ class Flasher : public QObject
     QJsonObject bl_version_;
     QJsonObject fw_version_;
     QJsonArray product_info_;
+    QFile config_file_;
     QFile firmware_file_;
     bool is_bootloader_ {false};
     bool is_bootloader_expected_ {false};
     bool is_read_protection_enabled_ {false};
     bool is_timer_started_ {false};
     communication::SerialPort serial_port_;
-    socket::SocketClient socket_client_;
+    std::shared_ptr<socket::SocketClient> socket_client_;
     FlasherStates state_ {FlasherStates::kIdle};
     QElapsedTimer timer_;
     QThread worker_thread_;
@@ -141,8 +149,8 @@ class Flasher : public QObject
     bool SendMessage(const char *data, qint64 length, int timeout_ms);
     bool ReadMessageWithCrc(const char *in_data, qint64 length, int timeout_ms, QByteArray& out_data);
     void TryToConnect();
-
-    const QByteArray kFakeBoardId = "NOT_SECURED_MAGIC_STRING_1234567";
+    bool OpenConfigFile(QJsonDocument& json_document);
+    void CreateDefaultConfigFile();
 };
 
 } // namespace flasher

@@ -44,15 +44,25 @@ namespace socket {
 
 namespace  {
 
-    const QString kHeaderClientBoardInfo{"header_client_board_info"};
-    const QString kHeaderClientProductInfo{"header_client_product_info"};
-    const QString kHeaderServerProductInfo{"header_server_product_info"};
+const QString kHeaderClientBoardInfo{"header_client_board_info"};
+const QString kHeaderClientProductInfo{"header_client_product_info"};
+const QString kHeaderServerProductInfo{"header_server_product_info"};
 }
 
 class SocketClient : public QTcpSocket
 {
   public:
-    SocketClient();
+
+    /**
+     * Socket client constructor
+     *
+     * @param[in] address       Address of the server
+     * @param[in] port          Port of the server
+     * @param[in] preshared_key PreShared Key
+     */
+
+    SocketClient(const QString& address, const uint32_t& port, const QString& preshared_key);
+
     virtual ~SocketClient();
 
     /**
@@ -78,16 +88,15 @@ class SocketClient : public QTcpSocket
     virtual bool Connect();
     virtual bool Disconnect();
     virtual bool Authentication();
-    virtual bool ReadAll(QByteArray &data_out);
-    virtual bool SendData(const QByteArray &in_data);
+    virtual bool ReadAll(QByteArray& data_out);
+    virtual bool SendData(const QByteArray& in_data);
     virtual bool CheckAck();
 
-    const quint16 kPort {5322};
-    const QByteArray kShaKey{"NDQ4N2Y1YjFhZTg3ZGI3MTA1MjlhYmM3"};
+    quint16 server_port_;
+    QString server_address_;
+    QByteArray preshared_key_;
 
-    const QByteArray kACK{"ACK"};
-    const QByteArray kNACK{"NACK"};
-
+    const QByteArray kAck{"ACK"};
 };
 
 } // namespace socket
