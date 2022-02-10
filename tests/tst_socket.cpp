@@ -3,9 +3,16 @@
 #include <vector>
 #include <QMessageAuthenticationCode>
 
+constexpr char kDefaultAddress[]{"127.0.0.1"};
+constexpr int kDefaultPort = 5322;
+constexpr char kDefaultKey[]{"NDQ4N2Y1YjFhZTg3ZGI3MTA1MjlhYmM3"};
+
 class MockSocket_1 : public socket::SocketClient
 {
 public:
+    MockSocket_1(const QString& address, const uint32_t& port, const QString& preshared_key) : SocketClient(address, port, preshared_key)
+    {}
+
     std::vector<QByteArray> read_data_;
     std::vector<QByteArray> send_data_;
 private:
@@ -29,6 +36,10 @@ bool MockSocket_1::SendData(const QByteArray &in_data)
 
 class MockSocket_2 : public socket::SocketClient
 {
+public:
+    MockSocket_2(const QString& address, const uint32_t& port, const QString& preshared_key) : SocketClient(address, port, preshared_key)
+    {}
+
 private:
     bool ReadAll(QByteArray &data_out) override;
 };
@@ -41,6 +52,10 @@ bool MockSocket_2::ReadAll(QByteArray &data_out)
 
 class MockSocket_3 : public socket::SocketClient
 {
+public:
+    MockSocket_3(const QString& address, const uint32_t& port, const QString& preshared_key) : SocketClient(address, port, preshared_key)
+    {}
+
 private:
     bool ReadAll(QByteArray &data_out) override;
     bool SendData(const QByteArray &in_data) override;
@@ -54,7 +69,7 @@ bool MockSocket_3::ReadAll(QByteArray &data_out)
 
 bool MockSocket_3::SendData(const QByteArray &in_data)
 {
-    QByteArray test = in_data;
+    if (in_data.isEmpty()) {};
     return false;
 }
 
@@ -63,7 +78,7 @@ TestSocket::~TestSocket() = default;
 
 void TestSocket::TestSendBoardInfo()
 {
-    MockSocket_1 socket;
+    MockSocket_1 socket(kDefaultAddress, kDefaultPort, kDefaultKey);
 
     QString bl_git_branch = "master";
     QString bl_git_hash = "be387ad0b2ba6dc0877e8e255e872ee310a9127c";
@@ -125,7 +140,7 @@ void TestSocket::TestSendBoardInfo()
 
 void TestSocket::TestReceiveProductType()
 {
-    MockSocket_1 socket;
+    MockSocket_1 socket(kDefaultAddress, kDefaultPort, kDefaultKey);
 
     QString board_id = "test_board_id";
     QString manufacturer_id = "test_manufacturer_id";
@@ -194,7 +209,7 @@ void TestSocket::TestReceiveProductType()
 
 void TestSocket::TestReadFail()
 {
-    MockSocket_2 socket;
+    MockSocket_2 socket(kDefaultAddress, kDefaultPort, kDefaultKey);
 
     QString bl_git_branch = "master";
     QString bl_git_hash = "be387ad0b2ba6dc0877e8e255e872ee310a9127c";
@@ -229,7 +244,7 @@ void TestSocket::TestReadFail()
 
 void TestSocket::TestSendFail()
 {
-    MockSocket_3 socket;
+    MockSocket_3 socket(kDefaultAddress, kDefaultPort, kDefaultKey);
 
     QString board_id = "test_board_id";
     QString manufacturer_id = "test_manufacturer_id";
