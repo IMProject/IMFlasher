@@ -40,13 +40,18 @@
 
 namespace socket {
 
-SocketClient::SocketClient() = default;
+SocketClient::SocketClient(const QString& address, const uint32_t& port, const QString& preshared_key) :
+    server_port_(port),
+    server_address_(address),
+    preshared_key_(preshared_key.toUtf8())
+{}
+
 SocketClient::~SocketClient() = default;
 
 bool SocketClient::Connect()
 {
     bool success = false;
-    connectToHost(QHostAddress::LocalHost, kPort);
+    connectToHost(server_address_, server_port_);
     if (Authentication()) {
         success = true;
     } else {
@@ -69,7 +74,7 @@ bool SocketClient::Authentication()
 {
     bool success = false;
     QMessageAuthenticationCode code(QCryptographicHash::Sha256);
-    code.setKey(kShaKey);
+    code.setKey(preshared_key_);
 
     QByteArray token;
     success = ReadAll(token);
@@ -112,7 +117,7 @@ bool SocketClient::CheckAck()
     QByteArray ack;
     success = ReadAll(ack);
 
-    if (success && (kACK == ack)) {
+    if (success && (kAck == ack)) {
         success = true;
     }
 
