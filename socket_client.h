@@ -56,12 +56,10 @@ class SocketClient : public QTcpSocket
     /**
      * Socket client constructor
      *
-     * @param[in] address       Address of the server
-     * @param[in] port          Port of the server
-     * @param[in] preshared_key PreShared Key
+     * @param[in] servers_array   Json array with servers config
      */
 
-    SocketClient(const QString& address, const uint32_t& port, const QString& preshared_key);
+    SocketClient(QJsonArray& servers_array);
 
     virtual ~SocketClient();
 
@@ -95,6 +93,7 @@ class SocketClient : public QTcpSocket
     quint16 server_port_;
     QString server_address_;
     QByteArray preshared_key_;
+    QJsonArray servers_array_;
 
     const QByteArray kAck{"ACK"};
 };

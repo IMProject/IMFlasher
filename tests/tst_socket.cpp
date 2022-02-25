@@ -3,14 +3,31 @@
 #include <vector>
 #include <QMessageAuthenticationCode>
 
-constexpr char kDefaultAddress[]{"127.0.0.1"};
+constexpr char kDefaultAddress1[]{"127.0.0.1"};
+constexpr char kDefaultAddress2[]{"127.0.0.1"};
 constexpr int kDefaultPort = 5322;
 constexpr char kDefaultKey[]{"NDQ4N2Y1YjFhZTg3ZGI3MTA1MjlhYmM3"};
+
+void CreateServersArray(QJsonArray& json_array)
+{
+    QJsonObject json_object_server_1;
+    QJsonObject json_object_server_2;
+
+    json_object_server_1.insert("address", kDefaultAddress1);
+    json_object_server_1.insert("port", kDefaultPort);
+    json_object_server_1.insert("preshared_key", kDefaultKey);
+    json_array.append(json_object_server_1);
+
+    json_object_server_2.insert("address", kDefaultAddress2);
+    json_object_server_2.insert("port", kDefaultPort);
+    json_object_server_2.insert("preshared_key", kDefaultKey);
+    json_array.append(json_object_server_2);
+}
 
 class MockSocket_1 : public socket::SocketClient
 {
 public:
-    MockSocket_1(const QString& address, const uint32_t& port, const QString& preshared_key) : SocketClient(address, port, preshared_key)
+    MockSocket_1(QJsonArray& servers_array) : SocketClient(servers_array)
     {}
 
     std::vector<QByteArray> read_data_;
@@ -20,6 +37,7 @@ private:
 
     bool ReadAll(QByteArray &data_out) override;
     bool SendData(const QByteArray &in_data) override;
+    bool waitForConnected(int msecs = 30000) override;
 };
 
 bool MockSocket_1::ReadAll(QByteArray &data_out)
@@ -34,14 +52,22 @@ bool MockSocket_1::SendData(const QByteArray &in_data)
     return true;
 }
 
+bool MockSocket_1::waitForConnected(int msecs)
+{
+    if(msecs) {};
+    return true;
+}
+
+
 class MockSocket_2 : public socket::SocketClient
 {
 public:
-    MockSocket_2(const QString& address, const uint32_t& port, const QString& preshared_key) : SocketClient(address, port, preshared_key)
+    MockSocket_2(QJsonArray& servers_array) : SocketClient(servers_array)
     {}
 
 private:
     bool ReadAll(QByteArray &data_out) override;
+    bool waitForConnected(int msecs = 30000) override;
 };
 
 bool MockSocket_2::ReadAll(QByteArray &data_out)
@@ -50,15 +76,23 @@ bool MockSocket_2::ReadAll(QByteArray &data_out)
     return false;
 }
 
+bool MockSocket_2::waitForConnected(int msecs)
+{
+    if(msecs) {};
+    return true;
+}
+
+
 class MockSocket_3 : public socket::SocketClient
 {
 public:
-    MockSocket_3(const QString& address, const uint32_t& port, const QString& preshared_key) : SocketClient(address, port, preshared_key)
+    MockSocket_3(QJsonArray& servers_array) : SocketClient(servers_array)
     {}
 
 private:
     bool ReadAll(QByteArray &data_out) override;
     bool SendData(const QByteArray &in_data) override;
+    bool waitForConnected(int msecs = 30000) override;
 };
 
 bool MockSocket_3::ReadAll(QByteArray &data_out)
@@ -73,12 +107,21 @@ bool MockSocket_3::SendData(const QByteArray &in_data)
     return false;
 }
 
+bool MockSocket_3::waitForConnected(int msecs)
+{
+    if(msecs) {};
+    return true;
+}
+
+
 TestSocket::TestSocket() = default;
 TestSocket::~TestSocket() = default;
 
 void TestSocket::TestSendBoardInfo()
 {
-    MockSocket_1 socket(kDefaultAddress, kDefaultPort, kDefaultKey);
+    QJsonArray servers_array;
+    CreateServersArray(servers_array);
+    MockSocket_1 socket(servers_array);
 
     QString bl_git_branch = "master";
     QString bl_git_hash = "be387ad0b2ba6dc0877e8e255e872ee310a9127c";
@@ -140,7 +183,9 @@ void TestSocket::TestSendBoardInfo()
 
 void TestSocket::TestReceiveProductType()
 {
-    MockSocket_1 socket(kDefaultAddress, kDefaultPort, kDefaultKey);
+    QJsonArray servers_array;
+    CreateServersArray(servers_array);
+    MockSocket_1 socket(servers_array);
 
     QString board_id = "test_board_id";
     QString manufacturer_id = "test_manufacturer_id";
@@ -209,7 +254,9 @@ void TestSocket::TestReceiveProductType()
 
 void TestSocket::TestReadFail()
 {
-    MockSocket_2 socket(kDefaultAddress, kDefaultPort, kDefaultKey);
+    QJsonArray servers_array;
+    CreateServersArray(servers_array);
+    MockSocket_2 socket(servers_array);
 
     QString bl_git_branch = "master";
     QString bl_git_hash = "be387ad0b2ba6dc0877e8e255e872ee310a9127c";
@@ -244,7 +291,9 @@ void TestSocket::TestReadFail()
 
 void TestSocket::TestSendFail()
 {
-    MockSocket_3 socket(kDefaultAddress, kDefaultPort, kDefaultKey);
+    QJsonArray servers_array;
+    CreateServersArray(servers_array);
+    MockSocket_3 socket(servers_array);
 
     QString board_id = "test_board_id";
     QString manufacturer_id = "test_manufacturer_id";
