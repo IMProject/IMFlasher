@@ -113,6 +113,7 @@ class Flasher : public QObject
     void FailedToConnect();
     void RunLoop();
     void ShowTextInBrowser(const QString& text);
+    void ClearTextInBrowser();
     void SetButtons(const bool& isBootloader);
     void SetReadProtectionButtonText(const bool& isEnabled);
     void DisableAllButtons();

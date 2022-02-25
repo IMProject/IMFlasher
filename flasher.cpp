@@ -151,6 +151,7 @@ void Flasher::LoopHandler()
             break;
 
         case FlasherStates::kConnected:
+            emit ClearTextInBrowser();
             emit ShowStatusMsg("Connected");
             if (serial_port_.isOpen()) {
                 emit SetButtons(is_bootloader_);
