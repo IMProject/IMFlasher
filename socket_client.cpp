@@ -40,10 +40,14 @@
 
 namespace socket {
 
-SocketClient::SocketClient(const QString& address, const uint32_t& port, const QString& preshared_key) :
-    server_port_(port),
-    server_address_(address),
-    preshared_key_(preshared_key.toUtf8())
+namespace {
+
+constexpr qint64 kSocketTimeout {1000};
+
+} // namespace
+
+SocketClient::SocketClient(QJsonArray& servers_array) :
+    servers_array_(servers_array)
 {}
 
 SocketClient::~SocketClient() = default;
@@ -51,11 +55,24 @@ SocketClient::~SocketClient() = default;
 bool SocketClient::Connect()
 {
     bool success = false;
-    connectToHost(server_address_, server_port_);
-    if (Authentication()) {
-        success = true;
-    } else {
-        disconnectFromHost();
+
+    foreach (const QJsonValue &server, servers_array_)
+    {
+        QJsonObject obj = server.toObject();
+        server_address_ = obj["address"].toString();
+        server_port_ = obj["port"].toInt();
+        preshared_key_ = obj["preshared_key"].toString().toUtf8();
+
+        if ( state() == UnconnectedState) {
+            connectToHost(server_address_, server_port_);
+
+            if (waitForConnected(kSocketTimeout) && Authentication()) {
+                success = true;
+                break;
+            } else {
+                disconnectFromHost();
+            }
+        }
     }
 
     return success;
@@ -139,6 +156,10 @@ bool SocketClient::SendBoardInfo(QJsonObject board_info, QJsonObject bl_version,
         QJsonDocument json_doc;
         json_doc.setObject(packet_object);
         success = SendData(json_doc.toJson());
+
+        if (success) {
+            qInfo() << "Board info updated to server " << server_address_;
+        }
     }
 
     Disconnect();

@@ -83,7 +83,8 @@ constexpr char kDisconnectCmd[] = "disconnect";
 constexpr char kConfigFileName[] = "config.json";
 constexpr char kFakeBoardIdBase64[] = "Tk9UX1NFQ1VSRURfTUFHSUNfU1RSSU5HXzEyMzQ1Njc="; // NOT_SECURED_MAGIC_STRING_1234567
 
-constexpr char kDefaultAddress[] = "141.144.224.68";
+constexpr char kDefaultAddress1[] = "imtech.hr";
+constexpr char kDefaultAddress2[] = "141.144.224.68";
 constexpr int kDefaultPort = 5322;
 constexpr char kDefaultKey[] = "NDQ4N2Y1YjFhZTg3ZGI3MTA1MjlhYmM3";
 
@@ -120,13 +121,8 @@ void Flasher::Init()
 {
     QJsonDocument json_document;
     if (OpenConfigFile(json_document)) {
-        QJsonObject json_object_server = json_document.object().find("server")->toObject();
-
-        socket_client_ = std::make_shared<socket::SocketClient>(
-                             json_object_server.find("address")->toString(),
-                             json_object_server.find("port")->toInt(),
-                             json_object_server.find("preshared_key")->toString()
-                         );
+        QJsonArray servers_array = json_document.object().find("servers")->toArray();
+        socket_client_ = std::make_shared<socket::SocketClient>(servers_array);
     }
 
     Worker *worker = new Worker;
@@ -765,6 +761,11 @@ bool Flasher::OpenConfigFile(QJsonDocument& json_document)
         }
     }
 
+    //Check if servers config exist
+    if (0 == json_document.object().find("servers")->toArray().size()) {
+        CreateDefaultConfigFile();
+    }
+
     return success;
 }
 
@@ -775,12 +776,21 @@ void Flasher::CreateDefaultConfigFile()
 
         QJsonDocument json_data;
         QJsonObject json_object;
-        QJsonObject json_object_server;
+        QJsonObject json_object_server_1;
+        QJsonObject json_object_server_2;
+        QJsonArray json_array;
 
-        json_object_server.insert("address", kDefaultAddress);
-        json_object_server.insert("port", kDefaultPort);
-        json_object_server.insert("preshared_key", kDefaultKey);
-        json_object.insert("server", json_object_server);
+        json_object_server_1.insert("address", kDefaultAddress1);
+        json_object_server_1.insert("port", kDefaultPort);
+        json_object_server_1.insert("preshared_key", kDefaultKey);
+        json_array.append(json_object_server_1);
+
+        json_object_server_2.insert("address", kDefaultAddress2);
+        json_object_server_2.insert("port", kDefaultPort);
+        json_object_server_2.insert("preshared_key", kDefaultKey);
+        json_array.append(json_object_server_2);
+
+        json_object.insert("servers", json_array);
 
         json_data.setObject(json_object);
         stream_config_file << json_data.toJson();
