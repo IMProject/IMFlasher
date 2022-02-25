@@ -69,6 +69,7 @@ MainWindow::MainWindow(std::shared_ptr<flasher::Flasher> flasher, QWidget *paren
     });
 
     connect(flasher_.get(), &flasher::Flasher::ShowTextInBrowser, this, [&] (const auto& text) { ui_.textBrowser->append(text); });
+    connect(flasher_.get(), &flasher::Flasher::ClearTextInBrowser, this, [&] () {  ui_.textBrowser->clear(); });
 
     connect(flasher_.get(), &flasher::Flasher::SetButtons, this, [&] (const auto& is_bootloader)
     {
