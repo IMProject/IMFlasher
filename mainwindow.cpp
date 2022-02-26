@@ -139,7 +139,7 @@ void MainWindow::ConnectActions()
     connect(ui_.actionAbout, &QAction::triggered, this, [&] (void) {
         QMessageBox::about(this,
                            tr("About IMFlasher"),
-                           tr("The <b>IMFlasher</b> v1.2.0"));
+                           tr(version_info_.c_str()));
     });
 }
 
