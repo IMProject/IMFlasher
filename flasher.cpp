@@ -80,9 +80,13 @@ constexpr char kExitBlCmd[] = "exit_bl";
 constexpr char kCheckSignatureCmd[] = "check_signature";
 constexpr char kDisconnectCmd[] = "disconnect";
 
-constexpr char kConfigFileName[] = "config.json";
 constexpr char kFakeBoardIdBase64[] = "Tk9UX1NFQ1VSRURfTUFHSUNfU1RSSU5HXzEyMzQ1Njc="; // NOT_SECURED_MAGIC_STRING_1234567
 
+// Config
+constexpr char kConfigFileName[] = "config.json";
+constexpr uint32_t kConfigOpenAttempt = 2;
+
+// Servers default config
 constexpr char kDefaultAddress1[] = "imtech.hr";
 constexpr char kDefaultAddress2[] = "141.144.224.68";
 constexpr int kDefaultPort = 5322;
@@ -120,6 +124,7 @@ Flasher::~Flasher()
 void Flasher::Init()
 {
     QJsonDocument json_document;
+
     if (OpenConfigFile(json_document)) {
         QJsonArray servers_array = json_document.object().find("servers")->toArray();
         socket_client_ = std::make_shared<socket::SocketClient>(servers_array);
@@ -748,22 +753,27 @@ bool Flasher::OpenConfigFile(QJsonDocument& json_document)
     bool success = false;
     config_file_.setFileName(kConfigFileName);
 
-    if (!config_file_.exists()) {
-        CreateDefaultConfigFile();
-    }
+    for (uint32_t i = 0; i < kConfigOpenAttempt; i++) {
 
-    if (config_file_.open(QIODevice::ReadOnly)) {
-        QString json_string = config_file_.readAll();
-        config_file_.close();
-        json_document = QJsonDocument::fromJson(json_string.toUtf8());
-        if (!json_document.isEmpty()) {
-            success = true;
+        if (!config_file_.exists()) {
+            CreateDefaultConfigFile();
         }
-    }
 
-    //Check if servers config exist
-    if (0 == json_document.object().find("servers")->toArray().size()) {
-        CreateDefaultConfigFile();
+        if (config_file_.open(QIODevice::ReadOnly)) {
+            QString json_string = config_file_.readAll();
+            config_file_.close();
+            json_document = QJsonDocument::fromJson(json_string.toUtf8());
+            if (!json_document.isEmpty()) {
+
+                // Check if servers config exist
+                if (json_document.object().find("servers")->toArray().empty()) {
+                    CreateDefaultConfigFile();
+                } else {
+                    success = true;
+                    break;
+                }
+            }
+        }
     }
 
     return success;

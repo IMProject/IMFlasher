@@ -4,7 +4,7 @@
 #include <QMessageAuthenticationCode>
 
 constexpr char kDefaultAddress1[]{"127.0.0.1"};
-constexpr char kDefaultAddress2[]{"127.0.0.1"};
+constexpr char kDefaultAddress2[]{"127.0.0.2"}; // "localhost" doesn't work for some reason
 constexpr int kDefaultPort = 5322;
 constexpr char kDefaultKey[]{"NDQ4N2Y1YjFhZTg3ZGI3MTA1MjlhYmM3"};
 
@@ -27,7 +27,7 @@ void CreateServersArray(QJsonArray& json_array)
 class MockSocket_1 : public socket::SocketClient
 {
 public:
-    MockSocket_1(QJsonArray& servers_array) : SocketClient(servers_array)
+    MockSocket_1(const QJsonArray& servers_array) : SocketClient(servers_array)
     {}
 
     std::vector<QByteArray> read_data_;
@@ -62,7 +62,7 @@ bool MockSocket_1::waitForConnected(int msecs)
 class MockSocket_2 : public socket::SocketClient
 {
 public:
-    MockSocket_2(QJsonArray& servers_array) : SocketClient(servers_array)
+    MockSocket_2(const QJsonArray& servers_array) : SocketClient(servers_array)
     {}
 
 private:
@@ -86,7 +86,7 @@ bool MockSocket_2::waitForConnected(int msecs)
 class MockSocket_3 : public socket::SocketClient
 {
 public:
-    MockSocket_3(QJsonArray& servers_array) : SocketClient(servers_array)
+    MockSocket_3(const QJsonArray& servers_array) : SocketClient(servers_array)
     {}
 
 private:

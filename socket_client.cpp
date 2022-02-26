@@ -46,7 +46,7 @@ constexpr qint64 kSocketTimeout {1000};
 
 } // namespace
 
-SocketClient::SocketClient(QJsonArray& servers_array) :
+SocketClient::SocketClient(const QJsonArray& servers_array) :
     servers_array_(servers_array)
 {}
 
@@ -63,7 +63,7 @@ bool SocketClient::Connect()
         server_port_ = obj["port"].toInt();
         preshared_key_ = obj["preshared_key"].toString().toUtf8();
 
-        if ( state() == UnconnectedState) {
+        if (state() == UnconnectedState) {
             connectToHost(server_address_, server_port_);
 
             if (waitForConnected(kSocketTimeout) && Authentication()) {
