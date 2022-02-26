@@ -59,7 +59,7 @@ class SocketClient : public QTcpSocket
      * @param[in] servers_array   Json array with servers config
      */
 
-    SocketClient(QJsonArray& servers_array);
+    SocketClient(const QJsonArray& servers_array);
 
     virtual ~SocketClient();
 
