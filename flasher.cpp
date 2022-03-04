@@ -44,6 +44,8 @@
 #include "socket_client.h"
 #include "file_downloader.h"
 
+#define USE_SIGNATURE 0
+
 QT_BEGIN_NAMESPACE
 void Worker::DoWork()
 {
@@ -54,13 +56,17 @@ QT_END_NAMESPACE
 namespace flasher {
 namespace {
 
+#if USE_SIGNATURE
 constexpr qint64 kSignatureSize {64};
-constexpr int kEraseTimeoutInMs {5000};
+#else
+constexpr qint64 kSignatureSize {0};
+#endif
+constexpr int kEraseTimeoutInMs {8000};
 constexpr qint64 kPacketSize {256};
 constexpr unsigned long kThreadSleepTimeInMs {100U};
-constexpr int kSerialTimeoutInMs {100};
-constexpr int kCollectBoardIdSerialTimeoutInMs {300};
-constexpr int kCollectBoardInfoSerialTimeoutInMs {300};
+constexpr int kSerialTimeoutInMs {3000};
+constexpr int kCollectBoardIdSerialTimeoutInMs {1000};
+constexpr int kCollectBoardInfoSerialTimeoutInMs {1000};
 constexpr int kCrc32Size {4};
 constexpr int kBoardIdSize {32};
 constexpr int kTryToConnectTimeoutInMs {20000};
@@ -416,6 +422,7 @@ FlashingInfo Flasher::Flash()
     const char *data_signature = file_content_.data();
     const char *data_firmware = file_content_.data() + kSignatureSize;
 
+#if USE_SIGNATURE
     if (serial_port_.isOpen()) {
         flashing_info.success = SendMessage(kCheckSignatureCmd, sizeof(kCheckSignatureCmd), kSerialTimeoutInMs);
 
@@ -438,6 +445,14 @@ FlashingInfo Flasher::Flash()
         }
     }
 
+#else
+if (serial_port_.isOpen()) {
+   flashing_info.success = true;
+} else {
+    flashing_info.title = "Error";
+    flashing_info.description = "Serial port is not opened";
+}
+#endif
     if (flashing_info.success) {
         flashing_info.success = SendMessage(kVerifyFlasherCmd, sizeof(kVerifyFlasherCmd), kSerialTimeoutInMs);
 
