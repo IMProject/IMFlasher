@@ -36,6 +36,7 @@
 #define MAINWINDOW_H_
 
 #include <QMainWindow>
+#include <QJsonArray>
 
 #include "ui_mainwindow.h"
 
@@ -54,7 +55,7 @@ class MainWindow : public QMainWindow
     ~MainWindow();
 
   private slots:
-    void on_selectFirmware_clicked();
+    void on_browseFirmware_clicked();
     void on_loadFirmware_clicked();
     void on_enterBootloader_clicked();
     void on_protectButton_clicked();
@@ -73,6 +74,7 @@ class MainWindow : public QMainWindow
     void DisableAllButtons();
     void InitActions();
     void ShowStatusMessage(const QString& message);
+    void SetFirmwareList(const QJsonArray& product_info);
 };
 
 } // namespace gui
