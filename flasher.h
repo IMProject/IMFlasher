@@ -51,6 +51,12 @@ class SocketClient;
 
 } // namespace socket
 
+namespace file_downloader {
+
+class FileDownloader;
+
+} // namespace file_downloader
+
 QT_BEGIN_NAMESPACE
 class Worker : public QObject
 {
@@ -72,8 +78,10 @@ enum class FlasherStates {
     kConnected,
     kDisconnected,
     kServerDataExchange,
-    kSelectFirmware,
+    kBrowseFirmware,
     kCheckBoardInfo,
+    kLoadFirmwareFile,
+    kDownloadFirmwareFile,
     kFlash,
     kEnterBootloader,
     kEnteringBootloader,
@@ -104,10 +112,11 @@ class Flasher : public QObject
     bool SendEnterBootloaderCommand();
     void SendFlashCommand();
     void SetState(const FlasherStates& state);
+    void SetSelectedFirmwareVersion(const QString& selected_frimware_version);
     void TryToConnectConsole();
 
   signals:
-    void UpdateProgress(const qint64& sent_size, const qint64& firmware_size);
+    void UpdateProgressBar(const qint64& sent_size, const qint64& firmware_size);
     void ClearProgress();
     void ShowStatusMsg(const QString& text);
     void FailedToConnect();
@@ -118,9 +127,12 @@ class Flasher : public QObject
     void SetReadProtectionButtonText(const bool& isEnabled);
     void DisableAllButtons();
     void EnableLoadButton();
+    void SetFirmwareList(const QJsonArray& product_info);
 
   public slots:
     void LoopHandler();
+    void FileDownloaded();
+    void DownloadProgress(const qint64& bytes_received, const qint64& bytes_total);
 
   private:
     QString board_id_;
@@ -128,14 +140,19 @@ class Flasher : public QObject
     QJsonObject bl_version_;
     QJsonObject fw_version_;
     QJsonArray product_info_;
+    QString selected_frimware_version_;
     QFile config_file_;
     QFile firmware_file_;
     bool is_bootloader_ {false};
     bool is_bootloader_expected_ {false};
     bool is_read_protection_enabled_ {false};
     bool is_timer_started_ {false};
+    bool is_firmware_downloaded_{false};
+    bool is_download_success_{false};
+    QByteArray file_content_;
     communication::SerialPort serial_port_;
     std::shared_ptr<socket::SocketClient> socket_client_;
+    file_downloader::FileDownloader *file_downloader_;
     FlasherStates state_ {FlasherStates::kIdle};
     QElapsedTimer timer_;
     QThread worker_thread_;
@@ -150,6 +167,7 @@ class Flasher : public QObject
     bool SendMessage(const char *data, qint64 length, int timeout_ms);
     bool ReadMessageWithCrc(const char *in_data, qint64 length, int timeout_ms, QByteArray& out_data);
     void TryToConnect();
+    void DownloadFirmwareFromUrl();
     bool OpenConfigFile(QJsonDocument& json_document);
     void CreateDefaultConfigFile();
 };
