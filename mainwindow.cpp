@@ -52,8 +52,13 @@ MainWindow::MainWindow(std::shared_ptr<flasher::Flasher> flasher, QWidget *paren
     DisableAllButtons();
     ClearProgress();
 
-    connect(flasher_.get(), &flasher::Flasher::UpdateProgress, this, [&] (const qint64& sent_size, const qint64& firmware_size) {
-        const int progress_percentage = (100 * sent_size) / firmware_size;
+    connect(flasher_.get(), &flasher::Flasher::UpdateProgressBar, this, [&] (const qint64& sent_size, const qint64& firmware_size) {
+
+        int progress_percentage = 0;
+        if (firmware_size != 0) {
+            progress_percentage = (100 * sent_size) / firmware_size;
+        }
+
         ui_.progressBar->setValue(progress_percentage);
         qInfo() << sent_size << "/" << firmware_size << "B, " << progress_percentage << "%";
     });
@@ -77,12 +82,12 @@ MainWindow::MainWindow(std::shared_ptr<flasher::Flasher> flasher, QWidget *paren
 
         if (is_bootloader) {
             ui_.enterBootloader->setText("Exit bootloader");
-            ui_.selectFirmware->setEnabled(true);
+            ui_.browseFirmware->setEnabled(true);
             ui_.protectButton->setEnabled(true);
         }
         else {
             ui_.enterBootloader->setText("Enter bootloader");
-            ui_.selectFirmware->setEnabled(false);
+            ui_.browseFirmware->setEnabled(false);
             ui_.protectButton->setEnabled(false);
         }
     });
@@ -99,6 +104,7 @@ MainWindow::MainWindow(std::shared_ptr<flasher::Flasher> flasher, QWidget *paren
 
     connect(flasher_.get(), &flasher::Flasher::DisableAllButtons, this, &MainWindow::DisableAllButtons);
     connect(flasher_.get(), &flasher::Flasher::EnableLoadButton, this, [&] { ui_.loadFirmware->setEnabled(true); });
+    connect(flasher_.get(), &flasher::Flasher::SetFirmwareList, this, &MainWindow::SetFirmwareList);
 }
 
 MainWindow::~MainWindow() = default;
@@ -112,9 +118,24 @@ void MainWindow::ClearProgress()
 void MainWindow::DisableAllButtons()
 {
     ui_.enterBootloader->setEnabled(false);
-    ui_.selectFirmware->setEnabled(false);
+    ui_.availableFirmware->setEnabled(false);
+    ui_.browseFirmware->setEnabled(false);
     ui_.loadFirmware->setEnabled(false);
     ui_.protectButton->setEnabled(false);
+}
+
+void MainWindow::SetFirmwareList(const QJsonArray& product_info)
+{
+    ui_.availableFirmware->clear();
+    foreach (const QJsonValue &value, product_info)
+    {
+        QJsonObject obj = value.toObject();
+        ui_.availableFirmware->addItem(obj["fw_version"].toString());
+    }
+
+    ui_.availableFirmware->show();
+    ui_.availableFirmware->setEnabled(true);
+    ui_.loadFirmware->setEnabled(true);
 }
 
 void MainWindow::ConnectActions()
@@ -148,6 +169,7 @@ void MainWindow::InitActions()
     ui_.actionConnect->setEnabled(true);
     ui_.actionDisconnect->setEnabled(false);
     ui_.actionQuit->setEnabled(true);
+    ui_.availableFirmware->hide();
 }
 
 void MainWindow::ShowStatusMessage(const QString& message)
@@ -155,16 +177,17 @@ void MainWindow::ShowStatusMessage(const QString& message)
     ui_.statusLabel->setText(message);
 }
 
-void MainWindow::on_selectFirmware_clicked()
+void MainWindow::on_browseFirmware_clicked()
 {
-    flasher_->SetState(flasher::FlasherStates::kSelectFirmware);
+    flasher_->SetState(flasher::FlasherStates::kBrowseFirmware);
 }
 
 void MainWindow::on_loadFirmware_clicked()
 {
+    flasher_->SetSelectedFirmwareVersion(ui_.availableFirmware->currentText());
     ui_.loadFirmware->setEnabled(false);
     ui_.progressBar->show();
-    flasher_->SetState(flasher::FlasherStates::kFlash);
+    flasher_->SetState(flasher::FlasherStates::kLoadFirmwareFile);
 }
 
 void MainWindow::on_enterBootloader_clicked()

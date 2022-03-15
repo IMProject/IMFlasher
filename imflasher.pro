@@ -14,6 +14,7 @@ DEFINES += GIT_HASH=\\\"$$GIT_HASH\\\"
 DEFINES += GIT_BRANCH=\\\"$$GIT_BRANCH\\\"
 SOURCES += \
     crc32.cpp \
+    file_downloader.cpp \
     flasher.cpp \
     main.cpp \
     mainwindow.cpp \
@@ -22,6 +23,7 @@ SOURCES += \
 
 HEADERS += \
     crc32.h \
+    file_downloader.h \
     flasher.h \
     flashing_info.h \
     mainwindow.h \
