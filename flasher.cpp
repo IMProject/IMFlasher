@@ -132,9 +132,9 @@ void Flasher::Init()
         socket_client_ = std::make_shared<socket::SocketClient>(servers_array);
     }
 
-    file_downloader_ = new file_downloader::FileDownloader();
-    connect(file_downloader_, &file_downloader::FileDownloader::Downloaded, this, &Flasher::FileDownloaded);
-    connect(file_downloader_, &file_downloader::FileDownloader::DownloadProgress, this, &Flasher::DownloadProgress);
+    file_downloader_ = std::make_unique<file_downloader::FileDownloader>();
+    connect(file_downloader_.get(), &file_downloader::FileDownloader::Downloaded, this, &Flasher::FileDownloaded);
+    connect(file_downloader_.get(), &file_downloader::FileDownloader::DownloadProgress, this, &Flasher::DownloadProgress);
 
     Worker *worker = new Worker;
     worker->moveToThread(&worker_thread_);
@@ -759,7 +759,7 @@ void Flasher::SetState(const FlasherStates& state)
 
 void Flasher::SetSelectedFirmwareVersion(const QString& selected_firmware_version)
 {
-    selected_frimware_version_ = selected_firmware_version;
+    selected_firmware_version_ = selected_firmware_version;
 }
 
 void Flasher::TryToConnectConsole()
@@ -810,7 +810,7 @@ void Flasher::DownloadFirmwareFromUrl()
     foreach (const QJsonValue &value, product_info_)
     {
         QJsonObject obj = value.toObject();
-        if (obj["fw_version"].toString() == selected_frimware_version_) {
+        if (obj["fw_version"].toString() == selected_firmware_version_) {
 
             QUrl firmware_url(obj["url"].toString());
             file_downloader_->StartDownload(firmware_url);

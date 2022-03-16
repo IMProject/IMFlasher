@@ -112,7 +112,7 @@ class Flasher : public QObject
     bool SendEnterBootloaderCommand();
     void SendFlashCommand();
     void SetState(const FlasherStates& state);
-    void SetSelectedFirmwareVersion(const QString& selected_frimware_version);
+    void SetSelectedFirmwareVersion(const QString& selected_firmware_version);
     void TryToConnectConsole();
 
   signals:
@@ -140,7 +140,7 @@ class Flasher : public QObject
     QJsonObject bl_version_;
     QJsonObject fw_version_;
     QJsonArray product_info_;
-    QString selected_frimware_version_;
+    QString selected_firmware_version_;
     QFile config_file_;
     QFile firmware_file_;
     bool is_bootloader_ {false};
@@ -152,7 +152,7 @@ class Flasher : public QObject
     QByteArray file_content_;
     communication::SerialPort serial_port_;
     std::shared_ptr<socket::SocketClient> socket_client_;
-    file_downloader::FileDownloader *file_downloader_;
+    std::unique_ptr<file_downloader::FileDownloader> file_downloader_;
     FlasherStates state_ {FlasherStates::kIdle};
     QElapsedTimer timer_;
     QThread worker_thread_;

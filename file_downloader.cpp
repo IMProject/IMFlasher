@@ -61,7 +61,7 @@ bool FileDownloader::GetDownloadedData(QByteArray& downloaded_data) {
 
     bool success = false;
 
-    if(reply_ != nullptr) {
+    if (reply_) {
         downloaded_data = reply_->readAll();
         reply_->deleteLater();
         success = true;
