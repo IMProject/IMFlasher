@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
 
                 if (0 == QString::compare("erase", action, Qt::CaseInsensitive)) {
 
-                    if (flasher->Erase()) {
+                    if (flasher->Erase().success) {
                         qInfo() << "Erase success";
 
                     } else {
@@ -75,8 +75,8 @@ int main(int argc, char *argv[])
                     }
 
                 } else if (0 == QString::compare("flash", action, Qt::CaseInsensitive)) {
-                    if (flasher->OpenFirmwareFile(file_path)) {
-                        flasher::FlashingInfo flashing_info = flasher->Flash();
+                    if (flasher->OpenFirmwareFile(file_path) && flasher->SetLocalFileContent()) {
+                        flasher::FlashingInfo flashing_info = flasher->ConsoleFlash();
                         qInfo() << flashing_info.description;
                     }
                     else {

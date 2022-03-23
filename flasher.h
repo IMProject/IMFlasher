@@ -82,7 +82,13 @@ enum class FlasherStates {
     kCheckBoardInfo,
     kLoadFirmwareFile,
     kDownloadFirmwareFile,
+    kCheckSignature,
+    kSendSignature,
+    kVerifyFlasher,
+    kSendFileSize,
+    kErase,
     kFlash,
+    kCheckCrc,
     kEnterBootloader,
     kEnteringBootloader,
     kReconnect,
@@ -103,14 +109,15 @@ class Flasher : public QObject
 
     bool CollectBoardId();
     bool CollectBoardInfo();
-    bool Erase();
-    FlashingInfo Flash();
+    FlashingInfo ConsoleFlash();
+    FlashingInfo Erase();
     void Init();
     bool IsBootloaderDetected() const;
     bool IsReadProtectionEnabled() const;
     bool OpenFirmwareFile(const QString& file_path);
     bool SendEnterBootloaderCommand();
     void SendFlashCommand();
+    bool SetLocalFileContent();
     void SetState(const FlasherStates& state);
     void SetSelectedFirmwareVersion(const QString& selected_firmware_version);
     void TryToConnectConsole();
@@ -119,6 +126,7 @@ class Flasher : public QObject
     void UpdateProgressBar(const qint64& sent_size, const qint64& firmware_size);
     void ClearProgress();
     void ShowStatusMsg(const QString& text);
+    void ClearStatusMsg();
     void FailedToConnect();
     void RunLoop();
     void ShowTextInBrowser(const QString& text);
@@ -158,18 +166,23 @@ class Flasher : public QObject
     QThread worker_thread_;
 
     bool CheckAck();
+    FlashingInfo CheckSignature();
     bool CheckTrue();
-    bool CrcCheck(const uint8_t *data, const uint32_t size);
+    FlashingInfo CrcCheck();
+    void CreateDefaultConfigFile();
+    void DownloadFirmwareFromUrl();
+    FlashingInfo Flash();
     void GetVersion();
     bool GetVersionJson(QJsonObject& out_json_object);
     bool IsFirmwareProtected();
-    void ReconnectingToBoard();
-    bool SendMessage(const char *data, qint64 length, int timeout_ms);
-    bool ReadMessageWithCrc(const char *in_data, qint64 length, int timeout_ms, QByteArray& out_data);
-    void TryToConnect();
-    void DownloadFirmwareFromUrl();
     bool OpenConfigFile(QJsonDocument& json_document);
-    void CreateDefaultConfigFile();
+    bool ReadMessageWithCrc(const char *in_data, qint64 length, int timeout_ms, QByteArray& out_data);
+    void ReconnectingToBoard();
+    FlashingInfo SendFileSize();
+    bool SendMessage(const char *data, qint64 length, int timeout_ms);
+    FlashingInfo SendSignature();
+    FlashingInfo VerifyFlasher();
+    void TryToConnect();
 };
 
 } // namespace flasher
