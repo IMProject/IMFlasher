@@ -86,6 +86,7 @@ constexpr char kFakeBoardIdBase64[] = "Tk9UX1NFQ1VSRURfTUFHSUNfU1RSSU5HXzEyMzQ1N
 // Config
 constexpr char kConfigFileName[] = "config.json";
 constexpr uint32_t kConfigOpenAttempt = 2;
+constexpr char kConfigVersionStr[] = "config_version";
 
 // Servers default config
 constexpr char kDefaultAddress1[] = "imtech.hr";
@@ -932,6 +933,13 @@ void Flasher::CreateDefaultConfigFile() {
 
         QJsonDocument json_data;
         QJsonObject json_object;
+
+        QJsonObject json_object_version;
+        json_object_version.insert("major", "1");
+        json_object_version.insert("minor", "0");
+        json_object_version.insert("patch", "0");
+
+        json_object.insert(kConfigVersionStr, json_object_version);
         QJsonObject json_object_server_1;
         QJsonObject json_object_server_2;
         QJsonArray json_array;
