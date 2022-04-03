@@ -56,7 +56,7 @@ bool SocketClient::Connect()
 {
     bool success = false;
 
-    foreach (const QJsonValue &server, servers_array_)
+    foreach (const QJsonValue& server, servers_array_)
     {
         QJsonObject obj = server.toObject();
         server_address_ = obj["address"].toString();

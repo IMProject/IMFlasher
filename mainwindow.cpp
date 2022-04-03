@@ -52,8 +52,7 @@ MainWindow::MainWindow(std::shared_ptr<flasher::Flasher> flasher, QWidget *paren
     DisableAllButtons();
     ClearProgress();
 
-    connect(flasher_.get(), &flasher::Flasher::UpdateProgressBar, this, [&] (const qint64& sent_size, const qint64& firmware_size) {
-
+    connect(flasher_.get(), &flasher::Flasher::UpdateProgressBar, this, [&] (const qint64& sent_size, const qint64& firmware_size) { // *NOPAD*
         int progress_percentage = 0;
         if (firmware_size != 0) {
             progress_percentage = (100 * sent_size) / firmware_size;
@@ -65,7 +64,7 @@ MainWindow::MainWindow(std::shared_ptr<flasher::Flasher> flasher, QWidget *paren
 
     connect(flasher_.get(), &flasher::Flasher::ClearProgress, this, &MainWindow::ClearProgress);
 
-    connect(flasher_.get(), &flasher::Flasher::ShowStatusMsg, this, [&] (const QString& text) { ShowStatusMessage(text); });
+    connect(flasher_.get(), &flasher::Flasher::ShowStatusMsg, this, [&] (const QString& text) { ShowStatusMessage(text); }); // *NOPAD*
 
     connect(flasher_.get(), &flasher::Flasher::ClearStatusMsg, this, [&] { ui_.statusLabel->clear(); });
 
@@ -75,11 +74,10 @@ MainWindow::MainWindow(std::shared_ptr<flasher::Flasher> flasher, QWidget *paren
         ui_.actionDisconnect->setEnabled(false);
     });
 
-    connect(flasher_.get(), &flasher::Flasher::ShowTextInBrowser, this, [&] (const auto& text) { ui_.textBrowser->append(text); });
+    connect(flasher_.get(), &flasher::Flasher::ShowTextInBrowser, this, [&] (const auto& text) { ui_.textBrowser->append(text); }); // *NOPAD*
     connect(flasher_.get(), &flasher::Flasher::ClearTextInBrowser, this, [&] {  ui_.textBrowser->clear(); });
 
-    connect(flasher_.get(), &flasher::Flasher::SetButtons, this, [&] (const auto& is_bootloader)
-    {
+    connect(flasher_.get(), &flasher::Flasher::SetButtons, this, [&] (const auto& is_bootloader) { // *NOPAD*
         ui_.enterBootloader->setEnabled(true);
 
         if (is_bootloader) {
@@ -94,8 +92,7 @@ MainWindow::MainWindow(std::shared_ptr<flasher::Flasher> flasher, QWidget *paren
         }
     });
 
-    connect(flasher_.get(), &flasher::Flasher::SetReadProtectionButtonText, this, [&] (const auto& is_enabled)
-    {
+    connect(flasher_.get(), &flasher::Flasher::SetReadProtectionButtonText, this, [&] (const auto& is_enabled) { // *NOPAD*
         if (is_enabled) {
             ui_.protectButton->setText("Disable read protection");
         }
@@ -129,7 +126,7 @@ void MainWindow::DisableAllButtons()
 void MainWindow::SetFirmwareList(const QJsonArray& product_info)
 {
     ui_.availableFirmware->clear();
-    foreach (const QJsonValue &value, product_info)
+    foreach (const QJsonValue& value, product_info)
     {
         QJsonObject obj = value.toObject();
         ui_.availableFirmware->addItem(obj["fw_version"].toString());

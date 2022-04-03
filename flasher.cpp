@@ -926,7 +926,7 @@ void Flasher::TryToConnect()
 
 void Flasher::DownloadFirmwareFromUrl()
 {
-    foreach (const QJsonValue &value, product_info_)
+    foreach (const QJsonValue& value, product_info_)
     {
         QJsonObject obj = value.toObject();
         if (obj["fw_version"].toString() == selected_firmware_version_) {

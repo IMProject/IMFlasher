@@ -44,7 +44,7 @@ void FileDownloader::StartDownload(const QUrl& url)
     QNetworkRequest request(url);
     request.setSslConfiguration(QSslConfiguration::defaultConfiguration());
     reply_ = net_access_manager_.get(request);
-    connect(reply_, &QNetworkReply::downloadProgress,this, &FileDownloader::SetDownloadProgress);
+    connect(reply_, &QNetworkReply::downloadProgress, this, &FileDownloader::SetDownloadProgress);
     connect(reply_, &QNetworkReply::finished, this, &FileDownloader::FileDownloaded);
 }
 

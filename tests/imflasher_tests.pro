@@ -15,3 +15,6 @@ SOURCES +=  tst_socket.cpp \
 HEADERS += \
     tst_socket.h \
     ../socket_client.h
+
+RESOURCES += \
+    ../imflasher.qrc

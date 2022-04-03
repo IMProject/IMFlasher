@@ -7,11 +7,11 @@ class TestSocket : public QObject
 {
     Q_OBJECT
 
-public:
+  public:
     TestSocket();
     ~TestSocket();
 
-private slots:
+  private slots:
     void TestSendBoardInfo();
     void TestReceiveProductType();
     void TestReadFail();
