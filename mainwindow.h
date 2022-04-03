@@ -65,9 +65,9 @@ class MainWindow : public QMainWindow
     std::shared_ptr<flasher::Flasher> flasher_;
 
     const std::string version_info_ =
-            std::string("The <b>IMFlasher</b> ") + GIT_TAG + "<br>" +
-            "Branch: " + GIT_BRANCH + "<br>" +
-            "Hash: " + GIT_HASH;
+        std::string("The <b>IMFlasher</b> ") + GIT_TAG + "<br>" +
+        "Branch: " + GIT_BRANCH + "<br>" +
+        "Hash: " + GIT_HASH;
 
     void ConnectActions();
     void ClearProgress();

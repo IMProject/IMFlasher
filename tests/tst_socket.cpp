@@ -3,10 +3,10 @@
 #include <vector>
 #include <QMessageAuthenticationCode>
 
-constexpr char kDefaultAddress1[]{"127.0.0.1"};
-constexpr char kDefaultAddress2[]{"127.0.0.2"}; // "localhost" doesn't work for some reason
+constexpr char kDefaultAddress1[] {"127.0.0.1"};
+constexpr char kDefaultAddress2[] {"127.0.0.2"}; // "localhost" doesn't work for some reason
 constexpr int kDefaultPort = 5322;
-constexpr char kDefaultKey[]{"NDQ4N2Y1YjFhZTg3ZGI3MTA1MjlhYmM3"};
+constexpr char kDefaultKey[] {"NDQ4N2Y1YjFhZTg3ZGI3MTA1MjlhYmM3"};
 
 void CreateServersArray(QJsonArray& json_array)
 {
@@ -26,27 +26,27 @@ void CreateServersArray(QJsonArray& json_array)
 
 class MockSocket_1 : public socket::SocketClient
 {
-public:
+  public:
     MockSocket_1(const QJsonArray& servers_array) : SocketClient(servers_array)
     {}
 
     std::vector<QByteArray> read_data_;
     std::vector<QByteArray> send_data_;
-private:
+  private:
     uint8_t read_array_index_ {0U};
 
-    bool ReadAll(QByteArray &data_out) override;
-    bool SendData(const QByteArray &in_data) override;
+    bool ReadAll(QByteArray& data_out) override;
+    bool SendData(const QByteArray& in_data) override;
     bool waitForConnected(int msecs = 30000) override;
 };
 
-bool MockSocket_1::ReadAll(QByteArray &data_out)
+bool MockSocket_1::ReadAll(QByteArray& data_out)
 {
     data_out = read_data_.at(read_array_index_++);
     return true;
 }
 
-bool MockSocket_1::SendData(const QByteArray &in_data)
+bool MockSocket_1::SendData(const QByteArray& in_data)
 {
     send_data_.emplace_back(in_data);
     return true;
@@ -54,23 +54,23 @@ bool MockSocket_1::SendData(const QByteArray &in_data)
 
 bool MockSocket_1::waitForConnected(int msecs)
 {
-    if(msecs) {};
+    if (msecs) {};
     return true;
 }
 
 
 class MockSocket_2 : public socket::SocketClient
 {
-public:
+  public:
     MockSocket_2(const QJsonArray& servers_array) : SocketClient(servers_array)
     {}
 
-private:
-    bool ReadAll(QByteArray &data_out) override;
+  private:
+    bool ReadAll(QByteArray& data_out) override;
     bool waitForConnected(int msecs = 30000) override;
 };
 
-bool MockSocket_2::ReadAll(QByteArray &data_out)
+bool MockSocket_2::ReadAll(QByteArray& data_out)
 {
     data_out = QByteArrayLiteral("ABCD");
     return false;
@@ -78,30 +78,30 @@ bool MockSocket_2::ReadAll(QByteArray &data_out)
 
 bool MockSocket_2::waitForConnected(int msecs)
 {
-    if(msecs) {};
+    if (msecs) {};
     return true;
 }
 
 
 class MockSocket_3 : public socket::SocketClient
 {
-public:
+  public:
     MockSocket_3(const QJsonArray& servers_array) : SocketClient(servers_array)
     {}
 
-private:
-    bool ReadAll(QByteArray &data_out) override;
-    bool SendData(const QByteArray &in_data) override;
+  private:
+    bool ReadAll(QByteArray& data_out) override;
+    bool SendData(const QByteArray& in_data) override;
     bool waitForConnected(int msecs = 30000) override;
 };
 
-bool MockSocket_3::ReadAll(QByteArray &data_out)
+bool MockSocket_3::ReadAll(QByteArray& data_out)
 {
     data_out = QByteArrayLiteral("ABCD");
     return true;
 }
 
-bool MockSocket_3::SendData(const QByteArray &in_data)
+bool MockSocket_3::SendData(const QByteArray& in_data)
 {
     if (in_data.isEmpty()) {};
     return false;
@@ -109,7 +109,7 @@ bool MockSocket_3::SendData(const QByteArray &in_data)
 
 bool MockSocket_3::waitForConnected(int msecs)
 {
-    if(msecs) {};
+    if (msecs) {};
     return true;
 }
 
@@ -199,9 +199,9 @@ void TestSocket::TestReceiveProductType()
     QJsonArray json_array;
 
     QString fw_version_1 = "v1.0.0";
-    QString url_1 ="https://test.com/firmware1.bin";
+    QString url_1 = "https://test.com/firmware1.bin";
     QString fw_version_2 = "v2.0.0";
-    QString url_2 ="https://test.com/firmware2.bin";
+    QString url_2 = "https://test.com/firmware2.bin";
 
     QJsonObject object1;
     object1.insert("fw_version", fw_version_1);
@@ -239,7 +239,7 @@ void TestSocket::TestReceiveProductType()
 
     std::vector<QString> fw_version_test;
     std::vector<QString> url_test;
-    foreach (const QJsonValue &value, rx_product_info)
+    foreach (const QJsonValue& value, rx_product_info)
     {
         QJsonObject obj = value.toObject();
         fw_version_test.emplace_back(obj["fw_version"].toString());
