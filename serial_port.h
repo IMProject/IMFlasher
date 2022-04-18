@@ -49,9 +49,30 @@ class SerialPort : public QSerialPort
     void CloseConn();
     bool TryOpenPort(bool& is_bootloader);
 
+    /**
+     * Wait until RX data is ready. The function has a predefined wait value with no data on the serial line,
+     * so it is able to receive data in chunks.
+     *
+     * @param[in] timeout   Function timeout value
+     */
+    void WaitForReadyRead(int timeout);
+
+    /**
+     * Function for copying data to a given reference. After data is copied internal buffer will be cleared.
+     *
+     * @param[out] data_out Reference to where data will be copied
+     */
+    void ReadData(QByteArray& data_out);
+
+  public slots:
+    void ReadyRead();
+
   private:
     bool DetectBoard(bool& is_bootloader);
     bool OpenConnection(const QString& port_name);
+
+    QByteArray serial_rx_data_;     //!< Byte Array work as an RX buffer.
+    int previous_rx_data_size_{0};
 };
 
 } // namespace communication
