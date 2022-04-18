@@ -542,7 +542,8 @@ FlashingInfo Flasher::CheckSignature()
 bool Flasher::CheckAck()
 {
     bool success = false;
-    const auto data = serial_port_.readAll();
+    QByteArray data;
+    serial_port_.ReadData(data);
     if (data.size() >= 2) {
         if (0 == QString::compare("OK", data, Qt::CaseInsensitive)) {
             qInfo() << "ACK";
@@ -563,7 +564,8 @@ bool Flasher::CheckTrue()
 {
     //TODO: better handling needed. For error false is returned
     bool success = false;
-    const auto data = serial_port_.readAll();
+    QByteArray data;
+    serial_port_.ReadData(data);
 
     if (0 == QString::compare("TRUE", data, Qt::CaseInsensitive)) {
         qInfo() << "TRUE";
@@ -699,8 +701,10 @@ FlashingInfo Flasher::Erase()
 void Flasher::GetVersion()
 {
     serial_port_.write(kVersionCmd, sizeof(kVersionCmd));
-    serial_port_.waitForReadyRead(kSerialTimeoutInMs);
-    emit ShowTextInBrowser(serial_port_.readAll());
+    serial_port_.WaitForReadyRead(kSerialTimeoutInMs);
+    QByteArray data;
+    serial_port_.ReadData(data);
+    emit ShowTextInBrowser(data);
 }
 
 bool Flasher::GetVersionJson(QJsonObject& out_json_object)
@@ -734,7 +738,7 @@ bool Flasher::IsFirmwareProtected()
 {
     qInfo() << "Send is firmware protected command";
     serial_port_.write(kIsFwProtectedCmd, sizeof(kIsFwProtectedCmd));
-    serial_port_.waitForReadyRead(kSerialTimeoutInMs);
+    serial_port_.WaitForReadyRead(kSerialTimeoutInMs);
     return CheckTrue();
 }
 
@@ -795,7 +799,7 @@ FlashingInfo Flasher::SendFileSize()
 bool Flasher::SendMessage(const char *data, qint64 length, int timeout_ms)
 {
     serial_port_.write(data, length);
-    serial_port_.waitForReadyRead(timeout_ms);
+    serial_port_.WaitForReadyRead(timeout_ms);
     return CheckAck();
 }
 
@@ -823,26 +827,22 @@ bool Flasher::ReadMessageWithCrc(const char *in_data, qint64 length, int timeout
         serial_port_.write(in_data, length);
 
         QByteArray data;
-        while (!timer.hasExpired(timeout_ms)) {
 
-            serial_port_.waitForReadyRead(kSerialTimeoutInMs);
-            data.append(serial_port_.readAll());
-            QByteArray data_crc = data.right(kCrc32Size);
+        serial_port_.WaitForReadyRead(timeout_ms);
+        serial_port_.ReadData(data);
+        QByteArray data_crc = data.right(kCrc32Size);
 
-            if (data.size() > kCrc32Size) {
+        if (data.size() > kCrc32Size) {
 
-                uint32_t out_data_size = data.size() - kCrc32Size;
-                uint32_t crc = Deserialize32(reinterpret_cast<uint8_t *>(data_crc.data()));
-                uint32_t calc_crc = crc::CalculateCrc32(reinterpret_cast<uint8_t *>(data.data()), out_data_size, false, false);
+            uint32_t out_data_size = data.size() - kCrc32Size;
+            uint32_t crc = Deserialize32(reinterpret_cast<uint8_t *>(data_crc.data()));
+            uint32_t calc_crc = crc::CalculateCrc32(reinterpret_cast<uint8_t *>(data.data()), out_data_size, false, false);
 
-                if (calc_crc == crc) {
-                    out_data = data.left(out_data_size);
-                    success = true;
-                    break;
-                }
+            if (calc_crc == crc) {
+                out_data = data.left(out_data_size);
+                success = true;
             }
         }
-
     }
 
     return success;
@@ -858,7 +858,7 @@ void Flasher::SendFlashCommand()
 {
     qInfo() << "Send flash command";
     serial_port_.write(kFlashFwCmd, sizeof(kFlashFwCmd));
-    serial_port_.waitForReadyRead(kSerialTimeoutInMs);
+    serial_port_.WaitForReadyRead(kSerialTimeoutInMs);
     // Check ack
 }
 

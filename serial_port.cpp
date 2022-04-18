@@ -37,10 +37,12 @@
 #include <QDebug>
 #include <QElapsedTimer>
 #include <QSerialPortInfo>
+#include <QThread>
 
 namespace communication {
 namespace {
 
+constexpr int kMaxNoDataPeriod {10}; //!< Max time in [ms] while waiting for new serial data. 10 ms = 1 kHz for sender minimal task frequency.
 constexpr int kSerialTimeoutInMs {100};
 constexpr char kSoftwareTypeCmd[] = "software_type";
 constexpr char kSwTypeImBoot[] = "IMBootloader";
@@ -48,8 +50,44 @@ constexpr char kSwTypeImApp[] = "IMApplication";
 
 } // namespace
 
-SerialPort::SerialPort() = default;
+SerialPort::SerialPort()
+{
+    connect(this, &communication::SerialPort::readyRead, this, &communication::SerialPort::ReadyRead);
+}
 SerialPort::~SerialPort() = default;
+
+void SerialPort::ReadyRead()
+{
+    serial_rx_data_.append(readAll());
+}
+
+void SerialPort::ReadData(QByteArray& data_out)
+{
+    data_out = serial_rx_data_;
+    serial_rx_data_.clear();
+    previous_rx_data_size_ = 0;
+}
+
+void SerialPort::WaitForReadyRead(int timeout)
+{
+    QElapsedTimer timer;
+    timer.start();
+
+    while (!timer.hasExpired(timeout)) {
+
+        QObject().thread()->msleep(kMaxNoDataPeriod); // Give some time to the sender to send the data
+        waitForReadyRead(1); //QSerial known workaround for triggering readyRead signal(https://bugreports.qt.io/browse/QTBUG-78086)
+
+        int current_rx_data_size = serial_rx_data_.size();
+        if ((current_rx_data_size == previous_rx_data_size_) && (current_rx_data_size != 0)) {
+            // No new data. Ready to read, exit the loop.
+            break;
+        }
+
+        previous_rx_data_size_ = current_rx_data_size;
+    }
+}
+
 
 void SerialPort::CloseConn()
 {
@@ -62,9 +100,11 @@ bool SerialPort::DetectBoard(bool& is_bootloader)
 {
     bool is_board_detected;
     write(kSoftwareTypeCmd, sizeof(kSoftwareTypeCmd));
-    waitForReadyRead(kSerialTimeoutInMs);
-    QString software_type = readAll();
+    WaitForReadyRead(kSerialTimeoutInMs);
+    QByteArray data_out;
+    ReadData(data_out);
 
+    QString software_type = data_out;
     if (software_type == kSwTypeImApp) {
         is_bootloader = false;
         is_board_detected = true;
