@@ -769,7 +769,7 @@ void Flasher::ReconnectingToBoard()
 
         if (timer_.hasExpired(kTryToConnectTimeoutInMs)) {
             ShowInfoMsg("Error!", "Entering/Exiting bootloader cannot be performed!");
-            SetState(FlasherStates::kError);
+            SetState(FlasherStates::kTryToConnect);
             is_timer_started_ = false;
         }
 
