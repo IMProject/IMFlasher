@@ -54,6 +54,7 @@ SerialPort::SerialPort()
 {
     connect(this, &communication::SerialPort::readyRead, this, &communication::SerialPort::ReadyRead);
 }
+
 SerialPort::~SerialPort() = default;
 
 void SerialPort::ReadyRead()
@@ -87,7 +88,6 @@ void SerialPort::WaitForReadyRead(int timeout)
         previous_rx_data_size_ = current_rx_data_size;
     }
 }
-
 
 void SerialPort::CloseConn()
 {

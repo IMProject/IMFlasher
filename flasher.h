@@ -134,6 +134,8 @@ class Flasher : public QObject
     void SetButtons(const bool& isBootloader);
     void SetReadProtectionButtonText(const bool& isEnabled);
     void DisableAllButtons();
+    void EnableConnectButton();
+    void EnableDisconnectButton();
     void EnableLoadButton();
     void SetFirmwareList(const QJsonArray& product_info);
 
@@ -141,6 +143,7 @@ class Flasher : public QObject
     void LoopHandler();
     void FileDownloaded();
     void DownloadProgress(const qint64& bytes_received, const qint64& bytes_total);
+    void HandleSerialPortError(QSerialPort::SerialPortError error);
 
   private:
     QString board_id_;

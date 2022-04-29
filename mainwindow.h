@@ -72,6 +72,8 @@ class MainWindow : public QMainWindow
     void ConnectActions();
     void ClearProgress();
     void DisableAllButtons();
+    void EnableConnectButton();
+    void EnableDisconnectButton();
     void InitActions();
     void ShowStatusMessage(const QString& message);
     void SetFirmwareList(const QJsonArray& product_info);
