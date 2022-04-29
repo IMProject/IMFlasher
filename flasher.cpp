@@ -136,6 +136,8 @@ void Flasher::Init()
     connect(file_downloader_.get(), &file_downloader::FileDownloader::Downloaded, this, &Flasher::FileDownloaded);
     connect(file_downloader_.get(), &file_downloader::FileDownloader::DownloadProgress, this, &Flasher::DownloadProgress);
 
+    connect(&serial_port_, &QSerialPort::errorOccurred, this, &Flasher::HandleSerialPortError);
+
     Worker *worker = new Worker;
     worker->moveToThread(&worker_thread_);
     connect(&worker_thread_, &QThread::finished, worker, &QObject::deleteLater);
@@ -397,7 +399,6 @@ void Flasher::LoopHandler()
             emit ClearProgress();
 
             if (flashing_info.success) {
-                serial_port_.CloseConn();
                 SetState(FlasherStates::kTryToConnect);
             } else {
                 emit ClearStatusMsg();
@@ -729,6 +730,18 @@ bool Flasher::GetVersionJson(QJsonObject& out_json_object)
     return success;
 }
 
+void Flasher::HandleSerialPortError(QSerialPort::SerialPortError error)
+{
+    if (error == QSerialPort::ResourceError) {
+        qInfo() << "Serial port error";
+        serial_port_.CloseConn();
+        emit ClearStatusMsg();
+        emit DisableAllButtons();
+        emit EnableConnectButton();
+        SetState(FlasherStates::kIdle);
+    }
+}
+
 bool Flasher::IsBootloaderDetected() const
 {
     return is_bootloader_;
@@ -903,6 +916,7 @@ void Flasher::TryToConnect()
     if (is_timer_started_) {
 
         if (serial_port_.TryOpenPort(is_bootloader_)) {
+            emit EnableDisconnectButton();
             SetState(FlasherStates::kConnected);
             is_timer_started_ = false;
             is_connected = true;

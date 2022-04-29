@@ -68,6 +68,10 @@ MainWindow::MainWindow(std::shared_ptr<flasher::Flasher> flasher, QWidget *paren
 
     connect(flasher_.get(), &flasher::Flasher::ClearStatusMsg, this, [&] { ui_.statusLabel->clear(); });
 
+    connect(flasher_.get(), &flasher::Flasher::EnableConnectButton, this, &MainWindow::EnableConnectButton);
+
+    connect(flasher_.get(), &flasher::Flasher::EnableDisconnectButton, this, &MainWindow::EnableDisconnectButton);
+
     connect(flasher_.get(), &flasher::Flasher::FailedToConnect, this, [&] {
         ShowStatusMessage(tr("Failed to connect!"));
         ui_.actionConnect->setEnabled(true);
@@ -141,15 +145,13 @@ void MainWindow::ConnectActions()
 {
     connect(ui_.actionConnect, &QAction::triggered, this, [&] (void)
     {
-        ui_.actionConnect->setEnabled(false);
-        ui_.actionDisconnect->setEnabled(true);
+        EnableDisconnectButton();
         flasher_->SetState(flasher::FlasherStates::kTryToConnect);
     });
 
     connect(ui_.actionDisconnect, &QAction::triggered, this, [&] (void)
     {
-        ui_.actionConnect->setEnabled(true);
-        ui_.actionDisconnect->setEnabled(false);
+        EnableConnectButton();
         DisableAllButtons();
         flasher_->SetState(flasher::FlasherStates::kDisconnected);
     });
@@ -163,10 +165,21 @@ void MainWindow::ConnectActions()
     });
 }
 
-void MainWindow::InitActions()
+void MainWindow::EnableConnectButton()
 {
     ui_.actionConnect->setEnabled(true);
     ui_.actionDisconnect->setEnabled(false);
+}
+
+void MainWindow::EnableDisconnectButton()
+{
+    ui_.actionConnect->setEnabled(false);
+    ui_.actionDisconnect->setEnabled(true);
+}
+
+void MainWindow::InitActions()
+{
+    EnableConnectButton();
     ui_.actionQuit->setEnabled(true);
     ui_.availableFirmware->hide();
 }
