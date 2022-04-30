@@ -11,9 +11,8 @@ For development Qt Creator 5.14.x is needed. The last supported version is 5.14.
 
 
 ### GUI
-![image](https://user-images.githubusercontent.com/10188706/118359122-41d84300-b582-11eb-8730-15c904fda4ee.png)
+![IMFlasher_v1 2 0](https://user-images.githubusercontent.com/10188706/166103709-5e37b51f-34e5-41c7-953a-fbe97f88fc1b.gif)
 
-![image](https://user-images.githubusercontent.com/10188706/118359153-73e9a500-b582-11eb-90b4-0a5fc73e628d.png)
 
 ### Console
 
