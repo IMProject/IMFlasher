@@ -7,8 +7,8 @@ Driver could be downloaded from [google drive](https://drive.google.com/file/d/1
 or from [ST page](https://my.st.com/content/my_st_com/en/products/development-tools/software-development-tools/stm32-software-development-tools/stm32-utilities/stsw-stm32102.license=1620802527054.product=STSW-STM32102.version=1.5.0.html).
 
 ### Development
-For development Qt Creator 5.14.x is needed. The last supported version is 5.14.2
-
+For development Qt 5 is needed. Recommended version is Qt 5.12.2.
+The link for Qt online installer can be found here https://www.qt.io/download-open-source
 
 ### GUI
 ![IMFlasher_v1 2 0](https://user-images.githubusercontent.com/10188706/166103709-5e37b51f-34e5-41c7-953a-fbe97f88fc1b.gif)
