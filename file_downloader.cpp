@@ -39,8 +39,7 @@ namespace file_downloader {
 FileDownloader::FileDownloader() = default;
 FileDownloader::~FileDownloader() = default;
 
-void FileDownloader::StartDownload(const QUrl& url)
-{
+void FileDownloader::StartDownload(const QUrl& url) {
     QNetworkRequest request(url);
     request.setSslConfiguration(QSslConfiguration::defaultConfiguration());
     reply_ = net_access_manager_.get(request);
@@ -48,8 +47,7 @@ void FileDownloader::StartDownload(const QUrl& url)
     connect(reply_, &QNetworkReply::finished, this, &FileDownloader::FileDownloaded);
 }
 
-void FileDownloader::SetDownloadProgress(qint64 bytes_received, qint64 bytes_total)
-{
+void FileDownloader::SetDownloadProgress(qint64 bytes_received, qint64 bytes_total) {
     emit DownloadProgress(bytes_received, bytes_total);
 }
 

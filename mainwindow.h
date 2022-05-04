@@ -42,12 +42,11 @@
 
 namespace flasher {
 class Flasher;
-}
+} // namespace flasher
 
 namespace gui {
 
-class MainWindow : public QMainWindow
-{
+class MainWindow : public QMainWindow {
     Q_OBJECT
 
   public:

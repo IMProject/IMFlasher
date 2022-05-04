@@ -1,4 +1,4 @@
-#Documentation http://manpages.ubuntu.com/manpages/trusty/man1/astyle.1.html
+# Documentation http://manpages.ubuntu.com/manpages/trusty/man1/astyle.1.html
 
 # 4 space indent
 indent=spaces=4
@@ -30,15 +30,18 @@ pad-header
 # Insert space padding around operators.
 pad-oper
 
-#Convert tabs to spaces in the non-indentation part  of  the  line.
-#The  number  of spaces  inserted  will  maintain  the  spacing  of the tab.
+# Convert tabs to spaces in the non-indentation part  of  the  line.
+# The  number  of spaces  inserted  will  maintain  the  spacing  of the tab.
 convert-tabs
 
-#The length will break a line if the code exceeds the preset number of characters
+# The length will break a line if the code exceeds the preset number of characters
 max-code-length=200
 
-#Set the minimal indent that is added when a header is built of multiple lines.
+# Set the minimal indent that is added when a header is built of multiple lines.
 min-conditional-indent=0
 
-#The maximum of # spaces to indent a continuation line.
+# The maximum of # spaces to indent a continuation line.
 max-continuation-indent=120
+
+# Java style uses attached braces.
+style=java

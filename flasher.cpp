@@ -45,8 +45,7 @@
 #include "file_downloader.h"
 
 QT_BEGIN_NAMESPACE
-void Worker::DoWork()
-{
+void Worker::DoWork() {
     emit FlasherLoop();
 }
 QT_END_NAMESPACE
@@ -94,8 +93,7 @@ constexpr char kDefaultAddress2[] = "141.144.224.68";
 constexpr int kDefaultPort = 5322;
 constexpr char kDefaultKey[] = "NDQ4N2Y1YjFhZTg3ZGI3MTA1MjlhYmM3";
 
-uint32_t Deserialize32(const uint8_t *buf)
-{
+uint32_t Deserialize32(const uint8_t *buf) {
     uint32_t result;
     result = static_cast<uint32_t>(buf[0] << 24U);
     result |= static_cast<uint32_t>(buf[1] << 16U);
@@ -104,8 +102,7 @@ uint32_t Deserialize32(const uint8_t *buf)
     return result;
 }
 
-bool ShowInfoMsg(const QString& title, const QString& description)
-{
+bool ShowInfoMsg(const QString& title, const QString& description) {
     QMessageBox msg_box;
     msg_box.setText(title);
     msg_box.setInformativeText(description);
@@ -117,14 +114,12 @@ bool ShowInfoMsg(const QString& title, const QString& description)
 
 Flasher::Flasher() = default;
 
-Flasher::~Flasher()
-{
+Flasher::~Flasher() {
     worker_thread_.quit();
     worker_thread_.wait();
 }
 
-void Flasher::Init()
-{
+void Flasher::Init() {
     QJsonDocument json_document;
 
     if (OpenConfigFile(json_document)) {
@@ -147,20 +142,17 @@ void Flasher::Init()
     emit RunLoop();
 }
 
-void Flasher::FileDownloaded()
-{
+void Flasher::FileDownloaded() {
     is_download_success_ = file_downloader_->GetDownloadedData(file_content_);
     is_firmware_downloaded_ = true;
 }
 
-void Flasher::DownloadProgress(const qint64& bytes_received, const qint64& bytes_total)
-{
+void Flasher::DownloadProgress(const qint64& bytes_received, const qint64& bytes_total) {
     timer_.start();
     emit UpdateProgressBar(bytes_received, bytes_total);
 }
 
-void Flasher::LoopHandler()
-{
+void Flasher::LoopHandler() {
     switch (state_) {
 
         case FlasherStates::kIdle:
@@ -193,8 +185,7 @@ void Flasher::LoopHandler()
             }
             break;
 
-        case FlasherStates::kDisconnected:
-        {
+        case FlasherStates::kDisconnected: {
             bool is_disconnected_success = true;
             is_timer_started_ = false;
 
@@ -228,8 +219,7 @@ void Flasher::LoopHandler()
                 } else {
                     SetState(FlasherStates::kServerDataExchange);
                 }
-            }
-            else {
+            } else {
                 emit ShowTextInBrowser("Board ID Error. Unplug your board, press disconnect/connect, and plug your board again.");
                 SetState(FlasherStates::kError);
             }
@@ -250,8 +240,7 @@ void Flasher::LoopHandler()
             SetState(FlasherStates::kIdle);
             break;
 
-        case FlasherStates::kBrowseFirmware:
-        {
+        case FlasherStates::kBrowseFirmware: {
             QString file_path = QFileDialog::getOpenFileName(nullptr,
                                                              tr("Firmware binary"),
                                                              "",
@@ -268,8 +257,7 @@ void Flasher::LoopHandler()
             break;
         }
 
-        case FlasherStates::kLoadFirmwareFile:
-        {
+        case FlasherStates::kLoadFirmwareFile: {
             if (SetLocalFileContent()) {
                 // Local firmware file
                 SetState(FlasherStates::kCheckSignature);
@@ -285,8 +273,7 @@ void Flasher::LoopHandler()
             break;
         }
 
-        case FlasherStates::kDownloadFirmwareFile:
-        {
+        case FlasherStates::kDownloadFirmwareFile: {
             if (is_firmware_downloaded_) {
                 is_firmware_downloaded_ = false;
                 if (!is_download_success_ || file_content_.isEmpty()) {
@@ -307,8 +294,7 @@ void Flasher::LoopHandler()
             break;
         }
 
-        case FlasherStates::kCheckSignature:
-        {
+        case FlasherStates::kCheckSignature: {
             emit ShowStatusMsg("Flashing");
             FlashingInfo flashing_info = CheckSignature();
             if (flashing_info.success) {
@@ -322,8 +308,7 @@ void Flasher::LoopHandler()
             break;
         }
 
-        case FlasherStates::kSendSignature:
-        {
+        case FlasherStates::kSendSignature: {
             FlashingInfo flashing_info = SendSignature();
             if (flashing_info.success) {
                 SetState(FlasherStates::kVerifyFlasher);
@@ -336,8 +321,7 @@ void Flasher::LoopHandler()
             break;
         }
 
-        case FlasherStates::kVerifyFlasher:
-        {
+        case FlasherStates::kVerifyFlasher: {
             FlashingInfo flashing_info = VerifyFlasher();
             if (flashing_info.success) {
                 SetState(FlasherStates::kSendFileSize);
@@ -350,8 +334,7 @@ void Flasher::LoopHandler()
             break;
         }
 
-        case FlasherStates::kSendFileSize:
-        {
+        case FlasherStates::kSendFileSize: {
             FlashingInfo flashing_info = SendFileSize();
             if (flashing_info.success) {
                 SetState(FlasherStates::kErase);
@@ -364,8 +347,7 @@ void Flasher::LoopHandler()
             break;
         }
 
-        case FlasherStates::kErase:
-        {
+        case FlasherStates::kErase: {
             FlashingInfo flashing_info = Erase();
             if (flashing_info.success) {
                 SetState(FlasherStates::kFlash);
@@ -378,8 +360,7 @@ void Flasher::LoopHandler()
             break;
         }
 
-        case FlasherStates::kFlash:
-        {
+        case FlasherStates::kFlash: {
             FlashingInfo flashing_info = Flash();
             if (flashing_info.success) {
                 SetState(FlasherStates::kCheckCrc);
@@ -392,8 +373,7 @@ void Flasher::LoopHandler()
             break;
         }
 
-        case FlasherStates::kCheckCrc:
-        {
+        case FlasherStates::kCheckCrc: {
             FlashingInfo flashing_info = CrcCheck();
             ShowInfoMsg(flashing_info.title, flashing_info.description);
             emit ClearProgress();
@@ -428,8 +408,7 @@ void Flasher::LoopHandler()
                 is_bootloader_expected_ = false;
                 serial_port_.CloseConn();
                 SetState(FlasherStates::kExitingBootloader);
-            }
-            else {
+            } else {
                 SetState(FlasherStates::kError);
             }
 
@@ -455,8 +434,7 @@ void Flasher::LoopHandler()
             if (SendMessage(kEnableFwProtectionCmd, sizeof(kEnableFwProtectionCmd), kSerialTimeoutInMs)) {
                 ShowInfoMsg("Enable readout protection", "Powercyle the board!");
                 SetState(FlasherStates::kReconnect);
-            }
-            else {
+            } else {
                 SetState(FlasherStates::kError);
             }
             break;
@@ -466,12 +444,10 @@ void Flasher::LoopHandler()
             if (ShowInfoMsg("Disable read protection", "Once disabled, complete flash will be erased including bootloader!")) {
                 if (SendMessage(kDisableFwProtectionCmd, sizeof(kDisableFwProtectionCmd), kSerialTimeoutInMs)) {
                     SetState(FlasherStates::kIdle);
-                }
-                else {
+                } else {
                     SetState(FlasherStates::kError);
                 }
-            }
-            else {
+            } else {
                 SetState(FlasherStates::kIdle);
             }
             break;
@@ -490,8 +466,7 @@ void Flasher::LoopHandler()
     emit RunLoop();
 }
 
-FlashingInfo Flasher::Flash()
-{
+FlashingInfo Flasher::Flash() {
     FlashingInfo flashing_info;
     const qint64 firmware_size = file_content_.size() - kSignatureSize;
     const qint64 num_of_packets = (firmware_size / kPacketSize);
@@ -527,8 +502,7 @@ FlashingInfo Flasher::Flash()
     return flashing_info;
 }
 
-FlashingInfo Flasher::CheckSignature()
-{
+FlashingInfo Flasher::CheckSignature() {
     FlashingInfo flashing_info;
     flashing_info.success = SendMessage(kCheckSignatureCmd, sizeof(kCheckSignatureCmd), kSerialTimeoutInMs);
 
@@ -540,8 +514,7 @@ FlashingInfo Flasher::CheckSignature()
     return flashing_info;
 }
 
-bool Flasher::CheckAck()
-{
+bool Flasher::CheckAck() {
     bool success = false;
     QByteArray data;
     serial_port_.ReadData(data);
@@ -561,8 +534,7 @@ bool Flasher::CheckAck()
     return success;
 }
 
-bool Flasher::CheckTrue()
-{
+bool Flasher::CheckTrue() {
     //TODO: better handling needed. For error false is returned
     bool success = false;
     QByteArray data;
@@ -580,8 +552,7 @@ bool Flasher::CheckTrue()
     return success;
 }
 
-FlashingInfo Flasher::CrcCheck()
-{
+FlashingInfo Flasher::CrcCheck() {
     FlashingInfo flashing_info;
     const qint64 firmware_size = file_content_.size() - kSignatureSize;
     const char *data_firmware = file_content_.data() + kSignatureSize;
@@ -605,8 +576,7 @@ FlashingInfo Flasher::CrcCheck()
     return flashing_info;
 }
 
-bool Flasher::CollectBoardId()
-{
+bool Flasher::CollectBoardId() {
     bool success = false;
 
     QByteArray out_data;
@@ -626,8 +596,7 @@ bool Flasher::CollectBoardId()
     return success;
 }
 
-bool Flasher::CollectBoardInfo()
-{
+bool Flasher::CollectBoardInfo() {
     bool success = false;
 
     QByteArray out_data;
@@ -649,8 +618,7 @@ bool Flasher::CollectBoardInfo()
     return success;
 }
 
-FlashingInfo Flasher::ConsoleFlash()
-{
+FlashingInfo Flasher::ConsoleFlash() {
     FlashingInfo flashing_info = CheckSignature();
     if (!flashing_info.success) {
         return flashing_info;
@@ -686,8 +654,7 @@ FlashingInfo Flasher::ConsoleFlash()
     return flashing_info;
 }
 
-FlashingInfo Flasher::Erase()
-{
+FlashingInfo Flasher::Erase() {
     FlashingInfo flashing_info;
     flashing_info.success = SendMessage(kEraseCmd, sizeof(kEraseCmd), kEraseTimeoutInMs);
 
@@ -699,8 +666,7 @@ FlashingInfo Flasher::Erase()
     return flashing_info;
 }
 
-void Flasher::GetVersion()
-{
+void Flasher::GetVersion() {
     serial_port_.write(kVersionCmd, sizeof(kVersionCmd));
     serial_port_.WaitForReadyRead(kSerialTimeoutInMs);
     QByteArray data;
@@ -708,8 +674,7 @@ void Flasher::GetVersion()
     emit ShowTextInBrowser(data);
 }
 
-bool Flasher::GetVersionJson(QJsonObject& out_json_object)
-{
+bool Flasher::GetVersionJson(QJsonObject& out_json_object) {
     bool success = false;
     QByteArray out_data;
     if (ReadMessageWithCrc(kVersionJsonCmd, sizeof(kVersionJsonCmd), kSerialTimeoutInMs, out_data)) {
@@ -730,8 +695,7 @@ bool Flasher::GetVersionJson(QJsonObject& out_json_object)
     return success;
 }
 
-void Flasher::HandleSerialPortError(QSerialPort::SerialPortError error)
-{
+void Flasher::HandleSerialPortError(QSerialPort::SerialPortError error) {
     if (error == QSerialPort::ResourceError) {
         qInfo() << "Serial port error";
         serial_port_.CloseConn();
@@ -742,40 +706,34 @@ void Flasher::HandleSerialPortError(QSerialPort::SerialPortError error)
     }
 }
 
-bool Flasher::IsBootloaderDetected() const
-{
+bool Flasher::IsBootloaderDetected() const {
     return is_bootloader_;
 }
 
-bool Flasher::IsFirmwareProtected()
-{
+bool Flasher::IsFirmwareProtected() {
     qInfo() << "Send is firmware protected command";
     serial_port_.write(kIsFwProtectedCmd, sizeof(kIsFwProtectedCmd));
     serial_port_.WaitForReadyRead(kSerialTimeoutInMs);
     return CheckTrue();
 }
 
-bool Flasher::IsReadProtectionEnabled() const
-{
+bool Flasher::IsReadProtectionEnabled() const {
     return is_read_protection_enabled_;
 }
 
-bool Flasher::OpenFirmwareFile(const QString& file_path)
-{
+bool Flasher::OpenFirmwareFile(const QString& file_path) {
     firmware_file_.setFileName(file_path);
 
     return firmware_file_.open(QIODevice::ReadOnly);
 }
 
-void Flasher::ReconnectingToBoard()
-{
+void Flasher::ReconnectingToBoard() {
     if (is_timer_started_) {
         if (serial_port_.TryOpenPort(is_bootloader_)) {
             if (is_bootloader_ == is_bootloader_expected_) {
                 SetState(FlasherStates::kConnected);
                 is_timer_started_ = false;
-            }
-            else {
+            } else {
                 serial_port_.CloseConn();
             }
         }
@@ -793,8 +751,7 @@ void Flasher::ReconnectingToBoard()
     }
 }
 
-FlashingInfo Flasher::SendFileSize()
-{
+FlashingInfo Flasher::SendFileSize() {
     FlashingInfo flashing_info;
     const qint64 firmware_size = file_content_.size() - kSignatureSize;
     QByteArray file_size;
@@ -809,15 +766,13 @@ FlashingInfo Flasher::SendFileSize()
     return flashing_info;
 }
 
-bool Flasher::SendMessage(const char *data, qint64 length, int timeout_ms)
-{
+bool Flasher::SendMessage(const char *data, qint64 length, int timeout_ms) {
     serial_port_.write(data, length);
     serial_port_.WaitForReadyRead(timeout_ms);
     return CheckAck();
 }
 
-FlashingInfo Flasher::SendSignature()
-{
+FlashingInfo Flasher::SendSignature() {
     FlashingInfo flashing_info;
     flashing_info.success = SendMessage(file_content_.data(), kSignatureSize, kSerialTimeoutInMs);
 
@@ -829,8 +784,7 @@ FlashingInfo Flasher::SendSignature()
     return flashing_info;
 }
 
-bool Flasher::ReadMessageWithCrc(const char *in_data, qint64 length, int timeout_ms, QByteArray& out_data)
-{
+bool Flasher::ReadMessageWithCrc(const char *in_data, qint64 length, int timeout_ms, QByteArray& out_data) {
     bool success = false;
 
     QElapsedTimer timer;
@@ -861,14 +815,12 @@ bool Flasher::ReadMessageWithCrc(const char *in_data, qint64 length, int timeout
     return success;
 }
 
-bool Flasher::SendEnterBootloaderCommand()
-{
+bool Flasher::SendEnterBootloaderCommand() {
     qInfo() << "Send enter bl command";
     return SendMessage(kEnterBlCmd, sizeof(kEnterBlCmd), kSerialTimeoutInMs);
 }
 
-void Flasher::SendFlashCommand()
-{
+void Flasher::SendFlashCommand() {
     qInfo() << "Send flash command";
     serial_port_.write(kFlashFwCmd, sizeof(kFlashFwCmd));
     serial_port_.WaitForReadyRead(kSerialTimeoutInMs);
@@ -884,18 +836,15 @@ bool Flasher::SetLocalFileContent() {
     return false;
 }
 
-void Flasher::SetState(const FlasherStates& state)
-{
+void Flasher::SetState(const FlasherStates& state) {
     state_ = state;
 }
 
-void Flasher::SetSelectedFirmwareVersion(const QString& selected_firmware_version)
-{
+void Flasher::SetSelectedFirmwareVersion(const QString& selected_firmware_version) {
     selected_firmware_version_ = selected_firmware_version;
 }
 
-void Flasher::TryToConnectConsole()
-{
+void Flasher::TryToConnectConsole() {
     QElapsedTimer timer;
     timer.start();
 
@@ -909,8 +858,7 @@ void Flasher::TryToConnectConsole()
     }
 }
 
-void Flasher::TryToConnect()
-{
+void Flasher::TryToConnect() {
     bool is_connected = false;
 
     if (is_timer_started_) {
@@ -920,8 +868,7 @@ void Flasher::TryToConnect()
             SetState(FlasherStates::kConnected);
             is_timer_started_ = false;
             is_connected = true;
-        }
-        else {
+        } else {
             emit ShowStatusMsg("Trying to connect...");
         }
 
@@ -930,18 +877,15 @@ void Flasher::TryToConnect()
             SetState(FlasherStates::kError);
             is_timer_started_ = false;
         }
-    }
-    else {
+    } else {
         emit DisableAllButtons();
         is_timer_started_ = true;
         timer_.start();
     }
 }
 
-void Flasher::DownloadFirmwareFromUrl()
-{
-    foreach (const QJsonValue& value, product_info_)
-    {
+void Flasher::DownloadFirmwareFromUrl() {
+    foreach (const QJsonValue& value, product_info_) {
         QJsonObject obj = value.toObject();
         if (obj["fw_version"].toString() == selected_firmware_version_) {
 
@@ -952,8 +896,7 @@ void Flasher::DownloadFirmwareFromUrl()
     }
 }
 
-bool Flasher::OpenConfigFile(QJsonDocument& json_document)
-{
+bool Flasher::OpenConfigFile(QJsonDocument& json_document) {
     bool success = false;
     config_file_.setFileName(kConfigFileName);
 
@@ -983,8 +926,7 @@ bool Flasher::OpenConfigFile(QJsonDocument& json_document)
     return success;
 }
 
-void Flasher::CreateDefaultConfigFile()
-{
+void Flasher::CreateDefaultConfigFile() {
     QTextStream stream_config_file(&config_file_);
     if (config_file_.open(QIODevice::WriteOnly)) {
 
@@ -1012,8 +954,7 @@ void Flasher::CreateDefaultConfigFile()
     }
 }
 
-FlashingInfo Flasher::VerifyFlasher()
-{
+FlashingInfo Flasher::VerifyFlasher() {
     FlashingInfo flashing_info;
     flashing_info.success = SendMessage(kVerifyFlasherCmd, sizeof(kVerifyFlasherCmd), kSerialTimeoutInMs);
 

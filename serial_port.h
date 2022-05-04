@@ -39,8 +39,7 @@
 
 namespace communication {
 
-class SerialPort : public QSerialPort
-{
+class SerialPort : public QSerialPort {
     Q_OBJECT
 
   public:

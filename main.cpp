@@ -41,8 +41,7 @@
 #include "serial_port.h"
 
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
     std::shared_ptr<flasher::Flasher> flasher = std::make_shared<flasher::Flasher>();
     gui::MainWindow window(flasher);
@@ -61,8 +60,7 @@ int main(int argc, char *argv[])
                 flasher->SendFlashCommand();
             }
             qInfo() << "Bootloader entered, please run this app again!";
-        }
-        else {
+        } else {
             if (flasher->CollectBoardId()) {
 
                 if (0 == QString::compare("erase", action, Qt::CaseInsensitive)) {
@@ -78,12 +76,10 @@ int main(int argc, char *argv[])
                     if (flasher->OpenFirmwareFile(file_path) && flasher->SetLocalFileContent()) {
                         flasher::FlashingInfo flashing_info = flasher->ConsoleFlash();
                         qInfo() << flashing_info.description;
-                    }
-                    else {
+                    } else {
                         qInfo() << "Open firmware file error";
                     }
-                }
-                else {
+                } else {
                     qInfo() << "Select flash or erase";
                 }
             }
