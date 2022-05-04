@@ -50,27 +50,23 @@ constexpr char kSwTypeImApp[] = "IMApplication";
 
 } // namespace
 
-SerialPort::SerialPort()
-{
+SerialPort::SerialPort() {
     connect(this, &communication::SerialPort::readyRead, this, &communication::SerialPort::ReadyRead);
 }
 
 SerialPort::~SerialPort() = default;
 
-void SerialPort::ReadyRead()
-{
+void SerialPort::ReadyRead() {
     serial_rx_data_.append(readAll());
 }
 
-void SerialPort::ReadData(QByteArray& data_out)
-{
+void SerialPort::ReadData(QByteArray& data_out) {
     data_out = serial_rx_data_;
     serial_rx_data_.clear();
     previous_rx_data_size_ = 0;
 }
 
-void SerialPort::WaitForReadyRead(int timeout)
-{
+void SerialPort::WaitForReadyRead(int timeout) {
     QElapsedTimer timer;
     timer.start();
 
@@ -89,15 +85,13 @@ void SerialPort::WaitForReadyRead(int timeout)
     }
 }
 
-void SerialPort::CloseConn()
-{
+void SerialPort::CloseConn() {
     if (isOpen()) {
         close();
     }
 }
 
-bool SerialPort::DetectBoard(bool& is_bootloader)
-{
+bool SerialPort::DetectBoard(bool& is_bootloader) {
     bool is_board_detected;
     write(kSoftwareTypeCmd, sizeof(kSoftwareTypeCmd));
     WaitForReadyRead(kSerialTimeoutInMs);
@@ -108,8 +102,7 @@ bool SerialPort::DetectBoard(bool& is_bootloader)
     if (software_type == kSwTypeImApp) {
         is_bootloader = false;
         is_board_detected = true;
-    }
-    else if (software_type == kSwTypeImBoot) {
+    } else if (software_type == kSwTypeImBoot) {
         is_bootloader = true;
         is_board_detected = true;
 
@@ -120,8 +113,7 @@ bool SerialPort::DetectBoard(bool& is_bootloader)
     return is_board_detected;
 }
 
-bool SerialPort::OpenConnection(const QString& port_name)
-{
+bool SerialPort::OpenConnection(const QString& port_name) {
     if (port_name.isEmpty()) return false;
 
     setPortName(port_name);
@@ -135,8 +127,7 @@ bool SerialPort::OpenConnection(const QString& port_name)
     return open(QIODevice::ReadWrite);
 }
 
-bool SerialPort::TryOpenPort(bool& is_bootloader)
-{
+bool SerialPort::TryOpenPort(bool& is_bootloader) {
     const auto& infos = QSerialPortInfo::availablePorts();
     for (const auto& info : infos) {
         if (OpenConnection(info.portName())) {

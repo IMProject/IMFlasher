@@ -58,8 +58,7 @@ class FileDownloader;
 } // namespace file_downloader
 
 QT_BEGIN_NAMESPACE
-class Worker : public QObject
-{
+class Worker : public QObject {
     Q_OBJECT
 
   public slots:
@@ -99,8 +98,7 @@ enum class FlasherStates {
     kError
 };
 
-class Flasher : public QObject
-{
+class Flasher : public QObject {
     Q_OBJECT
 
   public:

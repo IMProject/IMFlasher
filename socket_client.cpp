@@ -47,17 +47,14 @@ constexpr qint64 kSocketTimeout {1000};
 } // namespace
 
 SocketClient::SocketClient(const QJsonArray& servers_array) :
-    servers_array_(servers_array)
-{}
+    servers_array_(servers_array) {}
 
 SocketClient::~SocketClient() = default;
 
-bool SocketClient::Connect()
-{
+bool SocketClient::Connect() {
     bool success = false;
 
-    foreach (const QJsonValue& server, servers_array_)
-    {
+    foreach (const QJsonValue& server, servers_array_) {
         QJsonObject obj = server.toObject();
         server_address_ = obj["address"].toString();
         server_port_ = obj["port"].toInt();
@@ -78,8 +75,7 @@ bool SocketClient::Connect()
     return success;
 }
 
-bool SocketClient::Disconnect()
-{
+bool SocketClient::Disconnect() {
     if (state() == ConnectedState) {
         disconnectFromHost();
     }
@@ -87,8 +83,7 @@ bool SocketClient::Disconnect()
     return (state() != ConnectedState);
 }
 
-bool SocketClient::Authentication()
-{
+bool SocketClient::Authentication() {
     bool success = false;
     QMessageAuthenticationCode code(QCryptographicHash::Sha256);
     code.setKey(preshared_key_);
@@ -105,8 +100,7 @@ bool SocketClient::Authentication()
     return success;
 }
 
-bool SocketClient::ReadAll(QByteArray& out_data)
-{
+bool SocketClient::ReadAll(QByteArray& out_data) {
     bool success = waitForReadyRead();
     if (success) {
         out_data = readAll();
@@ -114,8 +108,7 @@ bool SocketClient::ReadAll(QByteArray& out_data)
     return success;
 }
 
-bool SocketClient::SendData(const QByteArray& in_data)
-{
+bool SocketClient::SendData(const QByteArray& in_data) {
     bool success = false;
     qint64 size = write(in_data);
     success = waitForBytesWritten();
@@ -127,8 +120,7 @@ bool SocketClient::SendData(const QByteArray& in_data)
     return success;
 }
 
-bool SocketClient::CheckAck()
-{
+bool SocketClient::CheckAck() {
     bool success = false;
 
     QByteArray ack;
@@ -141,8 +133,7 @@ bool SocketClient::CheckAck()
     return success;
 }
 
-bool SocketClient::SendBoardInfo(QJsonObject board_info, QJsonObject bl_version, QJsonObject fw_version)
-{
+bool SocketClient::SendBoardInfo(QJsonObject board_info, QJsonObject bl_version, QJsonObject fw_version) {
     bool success = Connect();
 
     if (success) {
@@ -173,8 +164,7 @@ bool SocketClient::SendBoardInfo(QJsonObject board_info, QJsonObject bl_version,
     return success;
 }
 
-bool SocketClient::ReceiveProductInfo(QJsonObject board_info, QJsonArray& product_info)
-{
+bool SocketClient::ReceiveProductInfo(QJsonObject board_info, QJsonArray& product_info) {
     bool success = Connect();
 
     if (success) {

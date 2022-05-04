@@ -8,8 +8,7 @@ constexpr char kDefaultAddress2[] {"127.0.0.2"}; // "localhost" doesn't work for
 constexpr int kDefaultPort = 5322;
 constexpr char kDefaultKey[] {"NDQ4N2Y1YjFhZTg3ZGI3MTA1MjlhYmM3"};
 
-void CreateServersArray(QJsonArray& json_array)
-{
+void CreateServersArray(QJsonArray& json_array) {
     QJsonObject json_object_server_1;
     QJsonObject json_object_server_2;
 
@@ -24,8 +23,7 @@ void CreateServersArray(QJsonArray& json_array)
     json_array.append(json_object_server_2);
 }
 
-class MockSocket_1 : public socket::SocketClient
-{
+class MockSocket_1 : public socket::SocketClient {
   public:
     MockSocket_1(const QJsonArray& servers_array) : SocketClient(servers_array)
     {}
@@ -40,27 +38,23 @@ class MockSocket_1 : public socket::SocketClient
     bool waitForConnected(int msecs = 30000) override;
 };
 
-bool MockSocket_1::ReadAll(QByteArray& data_out)
-{
+bool MockSocket_1::ReadAll(QByteArray& data_out) {
     data_out = read_data_.at(read_array_index_++);
     return true;
 }
 
-bool MockSocket_1::SendData(const QByteArray& in_data)
-{
+bool MockSocket_1::SendData(const QByteArray& in_data) {
     send_data_.emplace_back(in_data);
     return true;
 }
 
-bool MockSocket_1::waitForConnected(int msecs)
-{
+bool MockSocket_1::waitForConnected(int msecs) {
     if (msecs) {};
     return true;
 }
 
 
-class MockSocket_2 : public socket::SocketClient
-{
+class MockSocket_2 : public socket::SocketClient {
   public:
     MockSocket_2(const QJsonArray& servers_array) : SocketClient(servers_array)
     {}
@@ -70,21 +64,18 @@ class MockSocket_2 : public socket::SocketClient
     bool waitForConnected(int msecs = 30000) override;
 };
 
-bool MockSocket_2::ReadAll(QByteArray& data_out)
-{
+bool MockSocket_2::ReadAll(QByteArray& data_out) {
     data_out = QByteArrayLiteral("ABCD");
     return false;
 }
 
-bool MockSocket_2::waitForConnected(int msecs)
-{
+bool MockSocket_2::waitForConnected(int msecs) {
     if (msecs) {};
     return true;
 }
 
 
-class MockSocket_3 : public socket::SocketClient
-{
+class MockSocket_3 : public socket::SocketClient {
   public:
     MockSocket_3(const QJsonArray& servers_array) : SocketClient(servers_array)
     {}
@@ -95,20 +86,17 @@ class MockSocket_3 : public socket::SocketClient
     bool waitForConnected(int msecs = 30000) override;
 };
 
-bool MockSocket_3::ReadAll(QByteArray& data_out)
-{
+bool MockSocket_3::ReadAll(QByteArray& data_out) {
     data_out = QByteArrayLiteral("ABCD");
     return true;
 }
 
-bool MockSocket_3::SendData(const QByteArray& in_data)
-{
+bool MockSocket_3::SendData(const QByteArray& in_data) {
     if (in_data.isEmpty()) {};
     return false;
 }
 
-bool MockSocket_3::waitForConnected(int msecs)
-{
+bool MockSocket_3::waitForConnected(int msecs) {
     if (msecs) {};
     return true;
 }
@@ -117,8 +105,7 @@ bool MockSocket_3::waitForConnected(int msecs)
 TestSocket::TestSocket() = default;
 TestSocket::~TestSocket() = default;
 
-void TestSocket::TestSendBoardInfo()
-{
+void TestSocket::TestSendBoardInfo() {
     QJsonArray servers_array;
     CreateServersArray(servers_array);
     MockSocket_1 socket(servers_array);
@@ -181,8 +168,7 @@ void TestSocket::TestSendBoardInfo()
     QVERIFY2(rx_json_fw_version.value("git_tag") == fw_git_tag, "Sending fw version failed");
 }
 
-void TestSocket::TestReceiveProductType()
-{
+void TestSocket::TestReceiveProductType() {
     QJsonArray servers_array;
     CreateServersArray(servers_array);
     MockSocket_1 socket(servers_array);
@@ -239,8 +225,7 @@ void TestSocket::TestReceiveProductType()
 
     std::vector<QString> fw_version_test;
     std::vector<QString> url_test;
-    foreach (const QJsonValue& value, rx_product_info)
-    {
+    foreach (const QJsonValue& value, rx_product_info) {
         QJsonObject obj = value.toObject();
         fw_version_test.emplace_back(obj["fw_version"].toString());
         url_test.emplace_back(obj["url"].toString());
@@ -252,8 +237,7 @@ void TestSocket::TestReceiveProductType()
     QVERIFY(url_test.at(1) == url_2);
 }
 
-void TestSocket::TestReadFail()
-{
+void TestSocket::TestReadFail() {
     QJsonArray servers_array;
     CreateServersArray(servers_array);
     MockSocket_2 socket(servers_array);
@@ -289,8 +273,7 @@ void TestSocket::TestReadFail()
     QVERIFY2(!success, "Read data did not fail");
 }
 
-void TestSocket::TestSendFail()
-{
+void TestSocket::TestSendFail() {
     QJsonArray servers_array;
     CreateServersArray(servers_array);
     MockSocket_3 socket(servers_array);

@@ -41,8 +41,7 @@ constexpr int kCrcTableSize {256};
 constexpr uint32_t kCrcInitialValue = 0xFFFFFFFFU;
 constexpr uint32_t kCrcXorValue = 0xFFFFFFFFU;
 
-const uint32_t kCrcTable[kCrcTableSize] =
-{
+const uint32_t kCrcTable[kCrcTableSize] = {
     0x00000000, 0x04C11DB7, 0x09823B6E, 0x0D4326D9, 0x130476DC, 0x17C56B6B, 0x1A864DB2, 0x1E475005,
     0x2608EDB8, 0x22C9F00F, 0x2F8AD6D6, 0x2B4BCB61, 0x350C9B64, 0x31CD86D3, 0x3C8EA00A, 0x384FBDBD,
     0x4C11DB70, 0x48D0C6C7, 0x4593E01E, 0x4152FDA9, 0x5F15ADAC, 0x5BD4B01B, 0x569796C2, 0x52568B75,
@@ -77,8 +76,7 @@ const uint32_t kCrcTable[kCrcTableSize] =
     0xAFB010B1, 0xAB710D06, 0xA6322BDF, 0xA2F33668, 0xBCB4666D, 0xB8757BDA, 0xB5365D03, 0xB1F740B4
 };
 
-uint32_t Reflect(uint32_t data, const uint8_t num_of_bits)
-{
+uint32_t Reflect(uint32_t data, const uint8_t num_of_bits) {
     uint32_t reflection = 0U;
 
     // Reflect the data about the center bit.
@@ -100,16 +98,14 @@ uint32_t CalculateCrc32(
     const uint8_t *data,
     const uint32_t length,
     const bool reflected_output,
-    const bool reflected_input)
-{
+    const bool reflected_input) {
     uint8_t temp;
     uint32_t crc = kCrcInitialValue;
 
     for (uint32_t i = 0U; i < length; ++i) {
         if (reflected_input) {
             temp = Reflect(*data, 8U);
-        }
-        else {
+        } else {
             temp = *data;
         }
 

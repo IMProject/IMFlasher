@@ -49,8 +49,7 @@ const QString kHeaderClientProductInfo{"header_client_product_info"};
 const QString kHeaderServerProductInfo{"header_server_product_info"};
 }
 
-class SocketClient : public QTcpSocket
-{
+class SocketClient : public QTcpSocket {
   public:
 
     /**

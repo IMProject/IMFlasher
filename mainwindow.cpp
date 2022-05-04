@@ -43,8 +43,7 @@ namespace gui {
 
 MainWindow::MainWindow(std::shared_ptr<flasher::Flasher> flasher, QWidget *parent) :
     QMainWindow(parent),
-    flasher_(flasher)
-{
+    flasher_(flasher) {
     ui_.setupUi(this);
 
     InitActions();
@@ -88,8 +87,7 @@ MainWindow::MainWindow(std::shared_ptr<flasher::Flasher> flasher, QWidget *paren
             ui_.enterBootloader->setText("Exit bootloader");
             ui_.browseFirmware->setEnabled(true);
             ui_.protectButton->setEnabled(true);
-        }
-        else {
+        } else {
             ui_.enterBootloader->setText("Enter bootloader");
             ui_.browseFirmware->setEnabled(false);
             ui_.protectButton->setEnabled(false);
@@ -99,8 +97,7 @@ MainWindow::MainWindow(std::shared_ptr<flasher::Flasher> flasher, QWidget *paren
     connect(flasher_.get(), &flasher::Flasher::SetReadProtectionButtonText, this, [&] (const auto& is_enabled) { // *NOPAD*
         if (is_enabled) {
             ui_.protectButton->setText("Disable read protection");
-        }
-        else {
+        } else {
             ui_.protectButton->setText("Enable read protection");
         }
     });
@@ -112,14 +109,12 @@ MainWindow::MainWindow(std::shared_ptr<flasher::Flasher> flasher, QWidget *paren
 
 MainWindow::~MainWindow() = default;
 
-void MainWindow::ClearProgress()
-{
+void MainWindow::ClearProgress() {
     ui_.progressBar->hide();
     ui_.progressBar->setValue(0);
 }
 
-void MainWindow::DisableAllButtons()
-{
+void MainWindow::DisableAllButtons() {
     ui_.enterBootloader->setEnabled(false);
     ui_.availableFirmware->setEnabled(false);
     ui_.browseFirmware->setEnabled(false);
@@ -127,11 +122,9 @@ void MainWindow::DisableAllButtons()
     ui_.protectButton->setEnabled(false);
 }
 
-void MainWindow::SetFirmwareList(const QJsonArray& product_info)
-{
+void MainWindow::SetFirmwareList(const QJsonArray& product_info) {
     ui_.availableFirmware->clear();
-    foreach (const QJsonValue& value, product_info)
-    {
+    foreach (const QJsonValue& value, product_info) {
         QJsonObject obj = value.toObject();
         ui_.availableFirmware->addItem(obj["fw_version"].toString());
     }
@@ -141,16 +134,13 @@ void MainWindow::SetFirmwareList(const QJsonArray& product_info)
     ui_.loadFirmware->setEnabled(true);
 }
 
-void MainWindow::ConnectActions()
-{
-    connect(ui_.actionConnect, &QAction::triggered, this, [&] (void)
-    {
+void MainWindow::ConnectActions() {
+    connect(ui_.actionConnect, &QAction::triggered, this, [&] (void) {
         EnableDisconnectButton();
         flasher_->SetState(flasher::FlasherStates::kTryToConnect);
     });
 
-    connect(ui_.actionDisconnect, &QAction::triggered, this, [&] (void)
-    {
+    connect(ui_.actionDisconnect, &QAction::triggered, this, [&] (void) {
         EnableConnectButton();
         DisableAllButtons();
         flasher_->SetState(flasher::FlasherStates::kDisconnected);
@@ -165,59 +155,49 @@ void MainWindow::ConnectActions()
     });
 }
 
-void MainWindow::EnableConnectButton()
-{
+void MainWindow::EnableConnectButton() {
     ui_.actionConnect->setEnabled(true);
     ui_.actionDisconnect->setEnabled(false);
 }
 
-void MainWindow::EnableDisconnectButton()
-{
+void MainWindow::EnableDisconnectButton() {
     ui_.actionConnect->setEnabled(false);
     ui_.actionDisconnect->setEnabled(true);
 }
 
-void MainWindow::InitActions()
-{
+void MainWindow::InitActions() {
     EnableConnectButton();
     ui_.actionQuit->setEnabled(true);
     ui_.availableFirmware->hide();
 }
 
-void MainWindow::ShowStatusMessage(const QString& message)
-{
+void MainWindow::ShowStatusMessage(const QString& message) {
     ui_.statusLabel->setText(message);
 }
 
-void MainWindow::on_browseFirmware_clicked()
-{
+void MainWindow::on_browseFirmware_clicked() {
     flasher_->SetState(flasher::FlasherStates::kBrowseFirmware);
 }
 
-void MainWindow::on_loadFirmware_clicked()
-{
+void MainWindow::on_loadFirmware_clicked() {
     flasher_->SetSelectedFirmwareVersion(ui_.availableFirmware->currentText());
     ui_.loadFirmware->setEnabled(false);
     ui_.progressBar->show();
     flasher_->SetState(flasher::FlasherStates::kLoadFirmwareFile);
 }
 
-void MainWindow::on_enterBootloader_clicked()
-{
+void MainWindow::on_enterBootloader_clicked() {
     if (flasher_->IsBootloaderDetected()) {
         flasher_->SetState(flasher::FlasherStates::kExitBootloader);
-    }
-    else {
+    } else {
         flasher_->SetState(flasher::FlasherStates::kEnterBootloader);
     }
 }
 
-void MainWindow::on_protectButton_clicked()
-{
+void MainWindow::on_protectButton_clicked() {
     if (flasher_->IsReadProtectionEnabled()) {
         flasher_->SetState(flasher::FlasherStates::kDisableReadProtection);
-    }
-    else {
+    } else {
         flasher_->SetState(flasher::FlasherStates::kEnableReadProtection);
     }
 }

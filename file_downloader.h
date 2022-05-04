@@ -43,8 +43,7 @@
 
 namespace file_downloader {
 
-class FileDownloader : public QObject
-{
+class FileDownloader : public QObject {
     Q_OBJECT
   public:
     FileDownloader();
