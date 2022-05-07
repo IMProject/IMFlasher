@@ -147,11 +147,17 @@ bool SocketClient::SendBoardInfo(QJsonObject board_info, QJsonObject bl_version,
 
     if (success) {
 
+        QJsonObject app_version;
+        app_version.insert("app_branch", GIT_BRANCH);
+        app_version.insert("app_hash", GIT_HASH);
+        app_version.insert("app_tag", GIT_TAG);
+
         QJsonObject packet_object;
         packet_object.insert("header", kHeaderClientBoardInfo);
         packet_object.insert("board_info", board_info);
         packet_object.insert("bl_version", bl_version);
         packet_object.insert("fw_version", fw_version);
+        packet_object.insert("app_version", app_version);
 
         QJsonDocument json_doc;
         json_doc.setObject(packet_object);
