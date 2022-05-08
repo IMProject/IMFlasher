@@ -1,0 +1,6 @@
+PROJECT_NAME     = IMFlasher
+INPUT            = .
+EXCLUDE          = README.md
+WARNINGS         = YES
+OUTPUT_DIRECTORY = doc
+EXTRACT_PRIVATE  = YES
