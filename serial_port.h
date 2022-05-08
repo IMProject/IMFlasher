@@ -39,39 +39,72 @@
 
 namespace communication {
 
+/*!
+ * \brief The SerialPort class, contains serial port information
+ */
 class SerialPort : public QSerialPort {
+
     Q_OBJECT
 
   public:
+    /*!
+     * \brief SerialPort constructor
+     */
     SerialPort();
+
+    /*!
+     * \brief SerialPort destructor
+     */
     ~SerialPort();
+
+    /*!
+     * \brief Method used to close connection
+     */
     void CloseConn();
+
+    /*!
+     * \brief Method used to try to open port
+     * \param is_bootloader - Flag that determines if bootloader or firmware runs on the board
+     * \return True if port is successfully opened, false otherwise
+     */
     bool TryOpenPort(bool& is_bootloader);
 
-    /**
-     * Wait until RX data is ready. The function has a predefined wait value with no data on the serial line,
+    /*!
+     * \brief Wait until Rx data is ready. The method has a predefined wait value with no data on the serial line,
      * so it is able to receive data in chunks.
-     *
-     * @param[in] timeout   Function timeout value
+     * \param timeout - Function timeout value
      */
     void WaitForReadyRead(int timeout);
 
-    /**
-     * Function for copying data to a given reference. After data is copied internal buffer will be cleared.
-     *
-     * @param[out] data_out Reference to where data will be copied
+    /*!
+     * \brief Method used to copy data to a given reference. After data is copied internal buffer will be cleared.
+     * \param data_out - Reference to output data
      */
     void ReadData(QByteArray& data_out);
 
   public slots:
+    /*!
+     * \brief ReadyRead slot
+     */
     void ReadyRead();
 
   private:
+    /*!
+     * \brief Method used to detect board
+     * \param is_bootloader - Flag that determines if bootloader or firmware runs on the board
+     * \return True if board is successfully detected, false otherwise
+     */
     bool DetectBoard(bool& is_bootloader);
+
+    /*!
+     * \brief Method used to open connection
+     * \param port_name - Port name
+     * \return True if connection is successfully opened, false otherwise
+     */
     bool OpenConnection(const QString& port_name);
 
-    QByteArray serial_rx_data_;     //!< Byte Array work as an RX buffer.
-    int previous_rx_data_size_{0};
+    QByteArray serial_rx_data_;     //!< Byte Array work as an Rx buffer
+    int previous_rx_data_size_{0};  //!< Previous Rx data size
 };
 
 } // namespace communication

@@ -38,7 +38,14 @@
 #include <cstdint>
 
 namespace crc {
-
+/*!
+ * \brief Calculate CRC32
+ * \param data - Pointer to data on which CRC32 will be calculated
+ * \param length - Data length
+ * \param reflected_output - Flag that determines if output should be reflected
+ * \param reflected_input - Flag that determines if input should be reflected
+ * \return Calculated CRC32
+ */
 uint32_t CalculateCrc32(
     const uint8_t *data,
     const uint32_t length,
