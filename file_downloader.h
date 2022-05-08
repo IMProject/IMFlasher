@@ -43,24 +43,66 @@
 
 namespace file_downloader {
 
+/*!
+ * \brief The FileDownloader class, used to download file from server
+ */
 class FileDownloader : public QObject {
+
     Q_OBJECT
+
   public:
+    /*!
+     * \brief FileDownloader constructor
+     */
     FileDownloader();
+
+    /*!
+     * \brief FileDownloader destructor
+     */
     virtual ~FileDownloader();
+
+    /*!
+    * \brief Method used to start download process
+    * \param url - URL
+    */
     virtual void StartDownload(const QUrl& url);
+
+    /*!
+     * \brief Get downloaded data
+     * \param downloaded_data - Data that is downloaded
+     * \return True if data is successfully fetched, false otherwise
+     */
     virtual bool GetDownloadedData(QByteArray& downloaded_data);
 
   signals:
+    /*!
+     * \brief Signals that data is downloaded
+     */
     void Downloaded();
+
+    /*!
+     * \brief Signal download progress
+     * \param bytes_received - Number of received bytes
+     * \param bytes_total - Total number of bytes
+     */
     void DownloadProgress(const qint64& bytes_received, const qint64& bytes_total);
 
   private slots:
+    /*!
+     * \brief Set download progress slot
+     * \param bytes_received - Number of received bytes
+     * \param bytes_total - Total number of bytes
+     */
     void SetDownloadProgress(qint64 bytes_received, qint64 bytes_total);
+
+    /*!
+     * \brief FileDownloaded slot, file downloading is finished
+     */
     void FileDownloaded();
+
   private:
-    QNetworkAccessManager net_access_manager_;
-    QNetworkReply *reply_;
+    QNetworkAccessManager net_access_manager_;  //!< Network access manager
+    QNetworkReply *reply_;                      //!< Pointer to network reply
 };
 
 } // namespace file_downloader

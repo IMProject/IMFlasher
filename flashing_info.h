@@ -40,10 +40,13 @@
 
 namespace flasher {
 
+/*!
+ * \brief The FlashingInfo struct, contains flashing information
+ */
 struct FlashingInfo {
-    bool success {false};
-    QString title {"Unknown"};
-    QString description {"Unknown"};
+    bool success {false};               //!< Status of the flashing process
+    QString title {"Unknown"};          //!< Title of the message box
+    QString description {"Unknown"};    //!< Description in message box
 };
 
 } // namespace flasher

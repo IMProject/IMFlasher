@@ -1,5 +1,5 @@
 build*
-
 imflasher.pro.user
-
 *.autosave
+doc/html
+doc/latex

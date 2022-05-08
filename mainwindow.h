@@ -46,35 +46,97 @@ class Flasher;
 
 namespace gui {
 
+/*!
+ * \brief The MainWindow class
+ */
 class MainWindow : public QMainWindow {
+
     Q_OBJECT
 
   public:
+    /*!
+     * \brief MainWindow constructor
+     * \param flasher - Shared pointer to the Flasher object
+     * \param parent - Pointer to the parent QWidget
+     */
     explicit MainWindow(std::shared_ptr<flasher::Flasher> flasher, QWidget *parent = nullptr);
+
+    /*!
+     * \brief MainWindow destructor
+     */
     ~MainWindow();
 
   private slots:
+    /*!
+     * \brief on_browseFirmware_clicked
+     */
     void on_browseFirmware_clicked();
+
+    /*!
+     * \brief on_loadFirmware_clicked
+     */
     void on_loadFirmware_clicked();
+
+    /*!
+     * \brief on_enterBootloader_clicked
+     */
     void on_enterBootloader_clicked();
+
+    /*!
+     * \brief on_protectButton_clicked
+     */
     void on_protectButton_clicked();
 
   private:
-    Ui::MainWindow ui_;
-    std::shared_ptr<flasher::Flasher> flasher_;
+    Ui::MainWindow ui_;                                         //!< Ui::MainWindow
+    std::shared_ptr<flasher::Flasher> flasher_;                 //!< Shared pointer to the flasher object
 
+    //! Version information constant, contains git tag, git branch and git hash
     const std::string version_info_ =
         std::string("The <b>IMFlasher</b> ") + GIT_TAG + "<br>" +
         "Branch: " + GIT_BRANCH + "<br>" +
         "Hash: " + GIT_HASH;
 
+    /*!
+     * \brief Method used to connect actions
+     */
     void ConnectActions();
+
+    /*!
+     * \brief Method used to clear progress
+     */
     void ClearProgress();
+
+    /*!
+     * \brief Method used to disable all buttons
+     */
     void DisableAllButtons();
+
+    /*!
+     * \brief Method used to enable connect button and disable disconnect button
+     */
     void EnableConnectButton();
+
+    /*!
+     * \brief Method used to enable disconnect button and disable connect button
+     */
     void EnableDisconnectButton();
+
+    /*!
+     * \brief Method used to initialize actions
+     */
     void InitActions();
+
+    /*!
+     * \brief Method used to show status message
+     * \param message - Message that will be shown
+     */
     void ShowStatusMessage(const QString& message);
+
+    /*!
+     * \brief Method used to set firmware list
+     * \param product_info - Json array that presents product information
+     */
     void SetFirmwareList(const QJsonArray& product_info);
 };
 
