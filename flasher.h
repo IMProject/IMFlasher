@@ -324,12 +324,14 @@ class Flasher : public QObject {
     QString selected_firmware_version_;                                     //!< Selected firmware version
     QFile config_file_;                                                     //!< Configuration file
     QFile firmware_file_;                                                   //!< Firmware file
+    qint64 signature_size_{0};                                              //!< Firmware signature size
     bool is_bootloader_ {false};                                            //!< Is bootloader detected flag
     bool is_bootloader_expected_ {false};                                   //!< Is bootloader expected after board reset
     bool is_read_protection_enabled_ {false};                               //!< Is read protection enabled flag
     bool is_timer_started_ {false};                                         //!< Is timer started flag
     bool is_firmware_downloaded_{false};                                    //!< Is firmware downloaded flag
     bool is_download_success_{false};                                       //!< Is download successfully done
+    bool is_signature_warning_enabled_{false};                              //!< Is signature warning enabled
     QByteArray file_content_;                                               //!< File content
     communication::SerialPort serial_port_;                                 //!< Serial port object
     std::shared_ptr<socket::SocketClient> socket_client_;                   //!< Pointer to SocketClient object

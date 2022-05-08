@@ -87,6 +87,7 @@ constexpr char kFakeBoardIdBase64[] = "Tk9UX1NFQ1VSRURfTUFHSUNfU1RSSU5HXzEyMzQ1N
 constexpr char kConfigFileName[] = "config.json";
 constexpr uint32_t kConfigOpenAttempt = 2;
 constexpr char kConfigVersionStr[] = "config_version";
+constexpr char kEnableSignatureWarningStr[] = "enable_signature_warning";
 
 // Servers default config
 constexpr char kDefaultAddress1[] = "imtech.hr";
@@ -126,6 +127,10 @@ void Flasher::Init() {
     if (OpenConfigFile(json_document)) {
         QJsonArray servers_array = json_document.object().find("servers")->toArray();
         socket_client_ = std::make_shared<socket::SocketClient>(servers_array);
+
+        if (0 == QString::compare("true", json_document.object().find(kEnableSignatureWarningStr)->toString(), Qt::CaseInsensitive)) {
+            is_signature_warning_enabled_ = true;
+        }
     }
 
     file_downloader_ = std::make_unique<file_downloader::FileDownloader>();
@@ -469,9 +474,9 @@ void Flasher::LoopHandler() {
 
 FlashingInfo Flasher::Flash() {
     FlashingInfo flashing_info;
-    const qint64 firmware_size = file_content_.size() - kSignatureSize;
+    const qint64 firmware_size = file_content_.size() - signature_size_;
     const qint64 num_of_packets = (firmware_size / kPacketSize);
-    const char *data_firmware = file_content_.data() + kSignatureSize;
+    const char *data_firmware = file_content_.data() + signature_size_;
 
     // Send file in packages
     for (qint64 packet = 0; packet < num_of_packets; ++packet) {
@@ -555,8 +560,8 @@ bool Flasher::CheckTrue() {
 
 FlashingInfo Flasher::CrcCheck() {
     FlashingInfo flashing_info;
-    const qint64 firmware_size = file_content_.size() - kSignatureSize;
-    const char *data_firmware = file_content_.data() + kSignatureSize;
+    const qint64 firmware_size = file_content_.size() - signature_size_;
+    const char *data_firmware = file_content_.data() + signature_size_;
 
     const uint8_t *data = reinterpret_cast<const uint8_t *>(data_firmware);
     uint32_t crc = crc::CalculateCrc32(data, firmware_size, false, false);
@@ -754,7 +759,7 @@ void Flasher::ReconnectingToBoard() {
 
 FlashingInfo Flasher::SendFileSize() {
     FlashingInfo flashing_info;
-    const qint64 firmware_size = file_content_.size() - kSignatureSize;
+    const qint64 firmware_size = file_content_.size() - signature_size_;
     QByteArray file_size;
     file_size.setNum(firmware_size);
     flashing_info.success = SendMessage(file_size.data(), file_size.size(), kSerialTimeoutInMs);
@@ -775,7 +780,21 @@ bool Flasher::SendMessage(const char *data, qint64 length, int timeout_ms) {
 
 FlashingInfo Flasher::SendSignature() {
     FlashingInfo flashing_info;
+    signature_size_ = kSignatureSize;
+
     flashing_info.success = SendMessage(file_content_.data(), kSignatureSize, kSerialTimeoutInMs);
+    if (!flashing_info.success) {
+
+        bool continue_without_signature = true;
+        if (is_signature_warning_enabled_) {
+            continue_without_signature = ShowInfoMsg("No signature detected!", "Flashing without a signature is not safe. Flasher will assume that firmware is without signature.");
+        }
+
+        if (continue_without_signature) {
+            signature_size_ = 0;
+            flashing_info.success = true;
+        }
+    }
 
     if (!flashing_info.success) {
         flashing_info.title = "Flashing process failed";
@@ -940,6 +959,8 @@ void Flasher::CreateDefaultConfigFile() {
         json_object_version.insert("patch", "0");
 
         json_object.insert(kConfigVersionStr, json_object_version);
+        json_object.insert(kEnableSignatureWarningStr, "true");
+
         QJsonObject json_object_server_1;
         QJsonObject json_object_server_2;
         QJsonArray json_array;
