@@ -848,7 +848,7 @@ void Flasher::SendFlashCommand() {
 }
 
 bool Flasher::SetLocalFileContent() {
-    if (firmware_file_.size() != 0) {
+    if (firmware_file_.isOpen()) {
         file_content_ = firmware_file_.readAll();
         firmware_file_.close();
         return true;
