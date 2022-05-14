@@ -25,8 +25,8 @@ void CreateServersArray(QJsonArray& json_array) {
 
 class MockSocket_1 : public socket::SocketClient {
   public:
-    MockSocket_1(const QJsonArray& servers_array) : SocketClient(servers_array)
-    {}
+    MockSocket_1(QJsonArray servers_array) :
+        SocketClient(std::move(servers_array)) {}
 
     std::vector<QByteArray> read_data_;
     std::vector<QByteArray> send_data_;
@@ -56,8 +56,8 @@ bool MockSocket_1::waitForConnected(int msecs) {
 
 class MockSocket_2 : public socket::SocketClient {
   public:
-    MockSocket_2(const QJsonArray& servers_array) : SocketClient(servers_array)
-    {}
+    MockSocket_2(QJsonArray servers_array) :
+        SocketClient(std::move(servers_array)) {}
 
   private:
     bool ReadAll(QByteArray& data_out) override;
@@ -77,8 +77,8 @@ bool MockSocket_2::waitForConnected(int msecs) {
 
 class MockSocket_3 : public socket::SocketClient {
   public:
-    MockSocket_3(const QJsonArray& servers_array) : SocketClient(servers_array)
-    {}
+    MockSocket_3(QJsonArray servers_array) :
+        SocketClient(std::move(servers_array)) {}
 
   private:
     bool ReadAll(QByteArray& data_out) override;
@@ -108,7 +108,7 @@ TestSocket::~TestSocket() = default;
 void TestSocket::TestSendBoardInfo() {
     QJsonArray servers_array;
     CreateServersArray(servers_array);
-    MockSocket_1 socket(servers_array);
+    MockSocket_1 socket(std::move(servers_array));
 
     QString bl_git_branch = "master";
     QString bl_git_hash = "be387ad0b2ba6dc0877e8e255e872ee310a9127c";
@@ -171,7 +171,7 @@ void TestSocket::TestSendBoardInfo() {
 void TestSocket::TestReceiveProductType() {
     QJsonArray servers_array;
     CreateServersArray(servers_array);
-    MockSocket_1 socket(servers_array);
+    MockSocket_1 socket(std::move(servers_array));
 
     QString board_id = "test_board_id";
     QString manufacturer_id = "test_manufacturer_id";
@@ -240,7 +240,7 @@ void TestSocket::TestReceiveProductType() {
 void TestSocket::TestReadFail() {
     QJsonArray servers_array;
     CreateServersArray(servers_array);
-    MockSocket_2 socket(servers_array);
+    MockSocket_2 socket(std::move(servers_array));
 
     QString bl_git_branch = "master";
     QString bl_git_hash = "be387ad0b2ba6dc0877e8e255e872ee310a9127c";
@@ -276,7 +276,7 @@ void TestSocket::TestReadFail() {
 void TestSocket::TestSendFail() {
     QJsonArray servers_array;
     CreateServersArray(servers_array);
-    MockSocket_3 socket(servers_array);
+    MockSocket_3 socket(std::move(servers_array));
 
     QString board_id = "test_board_id";
     QString manufacturer_id = "test_manufacturer_id";

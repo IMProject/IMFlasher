@@ -57,9 +57,8 @@ class MainWindow : public QMainWindow {
     /*!
      * \brief MainWindow constructor
      * \param flasher - Shared pointer to the Flasher object
-     * \param parent - Pointer to the parent QWidget
      */
-    explicit MainWindow(std::shared_ptr<flasher::Flasher> flasher, QWidget *parent = nullptr);
+    explicit MainWindow(std::shared_ptr<flasher::Flasher> flasher);
 
     /*!
      * \brief MainWindow destructor

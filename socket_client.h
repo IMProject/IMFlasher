@@ -59,7 +59,7 @@ class SocketClient : public QTcpSocket {
      * \brief SocketClient constructor
      * \param servers_array - Json array with servers config
      */
-    explicit SocketClient(const QJsonArray& servers_array);
+    explicit SocketClient(QJsonArray servers_array);
 
     /*!
      * \brief SocketClient destructor

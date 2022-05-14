@@ -38,11 +38,11 @@
 #include <QMessageBox>
 
 #include "flasher.h"
+#include "flasher_states.h"
 
 namespace gui {
 
-MainWindow::MainWindow(std::shared_ptr<flasher::Flasher> flasher, QWidget *parent) :
-    QMainWindow(parent),
+MainWindow::MainWindow(std::shared_ptr<flasher::Flasher> flasher) :
     flasher_(flasher) {
     ui_.setupUi(this);
 
