@@ -42,11 +42,7 @@
 
 
 int main(int argc, char *argv[]) {
-    QApplication app(argc, argv);
     std::shared_ptr<flasher::Flasher> flasher = std::make_shared<flasher::Flasher>();
-    gui::MainWindow window(flasher);
-
-    app.setWindowIcon(QIcon(":/images/capman.png"));
 
     // Run console solution
     if (argc >= 2) {
@@ -86,6 +82,9 @@ int main(int argc, char *argv[]) {
         }
     } else {
         // Run GUI solution
+        QApplication app(argc, argv);
+        app.setWindowIcon(QIcon(":/images/capman.png"));
+        gui::MainWindow window(flasher);
         flasher->Init();
         window.show();
         app.exec();

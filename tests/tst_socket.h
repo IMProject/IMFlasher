@@ -4,6 +4,7 @@
 #include "socket_client.h"
 
 class TestSocket : public QObject {
+
     Q_OBJECT
 
   public:

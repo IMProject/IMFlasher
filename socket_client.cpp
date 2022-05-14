@@ -46,8 +46,8 @@ constexpr qint64 kSocketTimeout {1000};
 
 } // namespace
 
-SocketClient::SocketClient(const QJsonArray& servers_array) :
-    servers_array_(servers_array) {}
+SocketClient::SocketClient(QJsonArray servers_array) :
+    servers_array_(std::move(servers_array)) {}
 
 SocketClient::~SocketClient() = default;
 

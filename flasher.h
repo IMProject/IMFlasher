@@ -40,8 +40,8 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QThread>
-#include <QFile>
 
+#include "flasher_states.h"
 #include "flashing_info.h"
 #include "serial_port.h"
 
@@ -57,59 +57,10 @@ class FileDownloader;
 
 } // namespace file_downloader
 
-QT_BEGIN_NAMESPACE
-/*!
- * \brief The Worker class
- */
-class Worker : public QObject {
-
-    Q_OBJECT
-
-  public slots:
-    /*!
-     * \brief DoWork
-     */
-    void DoWork();
-
-  signals:
-    /*!
-     * \brief FlasherLoop signal
-     */
-    void FlasherLoop();
-};
-QT_END_NAMESPACE
-
 namespace flasher {
 
-enum class FlasherStates {
-    kIdle,
-    kTryToConnect,
-    kConnected,
-    kDisconnected,
-    kServerDataExchange,
-    kBrowseFirmware,
-    kCheckBoardInfo,
-    kLoadFirmwareFile,
-    kDownloadFirmwareFile,
-    kCheckSignature,
-    kSendSignature,
-    kVerifyFlasher,
-    kSendFileSize,
-    kErase,
-    kFlash,
-    kCheckCrc,
-    kEnterBootloader,
-    kEnteringBootloader,
-    kReconnect,
-    kExitBootloader,
-    kExitingBootloader,
-    kEnableReadProtection,
-    kDisableReadProtection,
-    kError
-};
-
 /*!
- * \brief The Flasher class, main class that is used to handle flashing process
+ * \brief The Flasher class, main class used to handle flashing process
  */
 class Flasher : public QObject {
 
@@ -117,7 +68,7 @@ class Flasher : public QObject {
 
   public:
     /*!
-     * \brief Flasher constructor
+     * \brief Flasher default constructor
      */
     Flasher();
 
@@ -334,7 +285,7 @@ class Flasher : public QObject {
     bool is_signature_warning_enabled_{false};                              //!< Is signature warning enabled
     QByteArray file_content_;                                               //!< File content
     communication::SerialPort serial_port_;                                 //!< Serial port object
-    std::shared_ptr<socket::SocketClient> socket_client_;                   //!< Pointer to SocketClient object
+    std::shared_ptr<socket::SocketClient> socket_client_;                   //!< Shared pointer to SocketClient object
     std::unique_ptr<file_downloader::FileDownloader> file_downloader_;      //!< Pointer to FileDownloader object
     FlasherStates state_ {FlasherStates::kIdle};                            //!< Flasher state
     QElapsedTimer timer_;                                                   //!< Timer

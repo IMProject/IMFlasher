@@ -43,12 +43,7 @@
 #include "crc32.h"
 #include "socket_client.h"
 #include "file_downloader.h"
-
-QT_BEGIN_NAMESPACE
-void Worker::DoWork() {
-    emit FlasherLoop();
-}
-QT_END_NAMESPACE
+#include "worker.h"
 
 namespace flasher {
 namespace {
@@ -126,7 +121,7 @@ void Flasher::Init() {
 
     if (OpenConfigFile(json_document)) {
         QJsonArray servers_array = json_document.object().find("servers")->toArray();
-        socket_client_ = std::make_shared<socket::SocketClient>(servers_array);
+        socket_client_ = std::make_shared<socket::SocketClient>(std::move(servers_array));
 
         if (0 == QString::compare("true", json_document.object().find(kEnableSignatureWarningStr)->toString(), Qt::CaseInsensitive)) {
             is_signature_warning_enabled_ = true;

@@ -19,16 +19,19 @@ SOURCES += \
     main.cpp \
     mainwindow.cpp \
     serial_port.cpp \
-    socket_client.cpp
+    socket_client.cpp \
+    worker.cpp
 
 HEADERS += \
     crc32.h \
     file_downloader.h \
     flasher.h \
+    flasher_states.h \
     flashing_info.h \
     mainwindow.h \
     serial_port.h \
-    socket_client.h
+    socket_client.h \
+    worker.h
 
 FORMS += \
     mainwindow.ui
