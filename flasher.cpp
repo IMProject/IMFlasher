@@ -85,8 +85,9 @@ constexpr char kConfigVersionStr[] = "config_version";
 constexpr char kEnableSignatureWarningStr[] = "enable_signature_warning";
 
 // Servers default config
-constexpr char kDefaultAddress1[] = "imtech.hr";
-constexpr char kDefaultAddress2[] = "141.144.224.68";
+constexpr char kDefaultServerAddress1[] = "server1.imtech.hr";
+constexpr char kDefaultServerAddress2[] = "server2.imtech.hr";
+constexpr char kDefaultServerAddress3[] = "server3.imtech.hr";
 constexpr int kDefaultPort = 5322;
 constexpr char kDefaultKey[] = "NDQ4N2Y1YjFhZTg3ZGI3MTA1MjlhYmM3";
 
@@ -958,17 +959,23 @@ void Flasher::CreateDefaultConfigFile() {
 
         QJsonObject json_object_server_1;
         QJsonObject json_object_server_2;
+        QJsonObject json_object_server_3;
         QJsonArray json_array;
 
-        json_object_server_1.insert("address", kDefaultAddress1);
+        json_object_server_1.insert("address", kDefaultServerAddress1);
         json_object_server_1.insert("port", kDefaultPort);
         json_object_server_1.insert("preshared_key", kDefaultKey);
         json_array.append(json_object_server_1);
 
-        json_object_server_2.insert("address", kDefaultAddress2);
+        json_object_server_2.insert("address", kDefaultServerAddress2);
         json_object_server_2.insert("port", kDefaultPort);
         json_object_server_2.insert("preshared_key", kDefaultKey);
         json_array.append(json_object_server_2);
+
+        json_object_server_3.insert("address", kDefaultServerAddress3);
+        json_object_server_3.insert("port", kDefaultPort);
+        json_object_server_3.insert("preshared_key", kDefaultKey);
+        json_array.append(json_object_server_3);
 
         json_object.insert("servers", json_array);
 
