@@ -53,7 +53,7 @@ MainWindow::MainWindow(std::shared_ptr<flasher::Flasher> flasher) :
 
     connect(flasher_.get(), &flasher::Flasher::UpdateProgressBarSignal, this, [&] (const quint8& progress_percentage) { // *NOPAD*
         ui_.progressBar->setValue(progress_percentage);
-    });
+    }, Qt::DirectConnection);
 
     connect(flasher_.get(), &flasher::Flasher::ClearProgress, this, &MainWindow::ClearProgress);
 
