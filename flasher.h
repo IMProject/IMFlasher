@@ -159,13 +159,19 @@ class Flasher : public QObject {
      */
     void TryToConnectConsole();
 
+    /*!
+    * \brief Update progress bar
+    * \param sent_size - Size that is sent
+    * \param firmware_size - Firmware size
+    */
+   void UpdateProgressBar(const quint64& sent_size, const quint64& firmware_size);
+
   signals:
     /*!
-     * \brief UpdateProgressBar signal
-     * \param sent_size - Size that is sent
-     * \param firmware_size - Firmware size
+     * \brief Update progress bar signal
+     * \param progress_percentage - value for the update in percentage
      */
-    void UpdateProgressBar(const qint64& sent_size, const qint64& firmware_size);
+    void UpdateProgressBarSignal(const qint8& progress_percentage);
 
     /*!
      * \brief Clear progress signal
@@ -276,6 +282,7 @@ class Flasher : public QObject {
     QFile config_file_;                                                     //!< Configuration file
     QFile firmware_file_;                                                   //!< Firmware file
     qint64 signature_size_{0};                                              //!< Firmware signature size
+    quint8 last_progress_percentage_{0};                                    //!< Last progress percentage
     bool is_bootloader_ {false};                                            //!< Is bootloader detected flag
     bool is_bootloader_expected_ {false};                                   //!< Is bootloader expected after board reset
     bool is_read_protection_enabled_ {false};                               //!< Is read protection enabled flag

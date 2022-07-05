@@ -51,14 +51,8 @@ MainWindow::MainWindow(std::shared_ptr<flasher::Flasher> flasher) :
     DisableAllButtons();
     ClearProgress();
 
-    connect(flasher_.get(), &flasher::Flasher::UpdateProgressBar, this, [&] (const qint64& sent_size, const qint64& firmware_size) { // *NOPAD*
-        int progress_percentage = 0;
-        if (firmware_size != 0) {
-            progress_percentage = (100 * sent_size) / firmware_size;
-        }
-
+    connect(flasher_.get(), &flasher::Flasher::UpdateProgressBarSignal, this, [&] (const quint8& progress_percentage) { // *NOPAD*
         ui_.progressBar->setValue(progress_percentage);
-        qInfo() << sent_size << "/" << firmware_size << "B, " << progress_percentage << "%";
     });
 
     connect(flasher_.get(), &flasher::Flasher::ClearProgress, this, &MainWindow::ClearProgress);
