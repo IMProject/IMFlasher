@@ -149,9 +149,24 @@ void Flasher::FileDownloaded() {
     is_firmware_downloaded_ = true;
 }
 
+void Flasher::UpdateProgressBar(const quint64& sent_size, const quint64& firmware_size)
+{
+    int progress_percentage = 0;
+    if (firmware_size != 0) {
+        progress_percentage = (100 * sent_size) / firmware_size;
+    }
+
+    if (last_progress_percentage_ != progress_percentage) {
+        last_progress_percentage_ = progress_percentage;
+        qInfo() << sent_size << "/" << firmware_size << "B, " << progress_percentage << "%";
+        emit UpdateProgressBarSignal(progress_percentage);
+    }
+}
+
 void Flasher::DownloadProgress(const qint64& bytes_received, const qint64& bytes_total) {
     timer_.start();
-    emit UpdateProgressBar(bytes_received, bytes_total);
+    UpdateProgressBar(bytes_received, bytes_total);
+
 }
 
 void Flasher::LoopHandler() {
@@ -477,7 +492,7 @@ FlashingInfo Flasher::Flash() {
     // Send file in packages
     for (qint64 packet = 0; packet < num_of_packets; ++packet) {
         const char *data_position = data_firmware + (packet * kPacketSize);
-        emit UpdateProgressBar((packet + 1U) * kPacketSize, firmware_size);
+        UpdateProgressBar((packet + 1U) * kPacketSize, firmware_size);
         flashing_info.success = SendMessage(data_position, kPacketSize, kSerialTimeoutInMs);
 
         if (!flashing_info.success) {
@@ -491,7 +506,7 @@ FlashingInfo Flasher::Flash() {
         const qint64 rest_size = firmware_size % kPacketSize;
 
         if (rest_size > 0) {
-            emit UpdateProgressBar(num_of_packets * kPacketSize + rest_size, firmware_size);
+            UpdateProgressBar(num_of_packets * kPacketSize + rest_size, firmware_size);
             flashing_info.success = SendMessage(data_firmware + (num_of_packets * kPacketSize), rest_size, kSerialTimeoutInMs);
 
             if (!flashing_info.success) {
