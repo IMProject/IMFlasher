@@ -279,6 +279,7 @@ class Flasher : public QObject {
     QJsonObject fw_version_;                                                //!< Firmware version
     QJsonArray product_info_;                                               //!< Product information
     QString selected_firmware_version_;                                     //!< Selected firmware version
+    QString firmware_file_source_;                                          //!< Firmware file source (URL or Server)
     QFile config_file_;                                                     //!< Configuration file
     QFile firmware_file_;                                                   //!< Firmware file
     qint64 signature_size_{0};                                              //!< Firmware signature size

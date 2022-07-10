@@ -132,6 +132,7 @@ void Flasher::Init() {
     file_downloader_ = std::make_unique<file_downloader::FileDownloader>();
     connect(file_downloader_.get(), &file_downloader::FileDownloader::Downloaded, this, &Flasher::FileDownloaded);
     connect(file_downloader_.get(), &file_downloader::FileDownloader::DownloadProgress, this, &Flasher::DownloadProgress);
+    connect(socket_client_.get(), &socket::SocketClient::DownloadProgress, this, &Flasher::DownloadProgress);
 
     connect(&serial_port_, &QSerialPort::errorOccurred, this, &Flasher::HandleSerialPortError);
 
@@ -164,9 +165,7 @@ void Flasher::UpdateProgressBar(const quint64& sent_size, const quint64& firmwar
 }
 
 void Flasher::DownloadProgress(const qint64& bytes_received, const qint64& bytes_total) {
-    timer_.start();
     UpdateProgressBar(bytes_received, bytes_total);
-
 }
 
 void Flasher::LoopHandler() {
@@ -280,17 +279,35 @@ void Flasher::LoopHandler() {
                 SetState(FlasherStates::kCheckSignature);
 
             } else {
-                // Load firmware file from url
-                DownloadFirmwareFromUrl();
-                emit ShowStatusMsg("Downloading");
-                timer_.start();
-                SetState(FlasherStates::kDownloadFirmwareFile);
+
+                if (firmware_file_source_ == "url") {
+                    // Load firmware file from url
+                    DownloadFirmwareFromUrl();
+                    emit ShowStatusMsg("Downloading");
+                    timer_.start();
+                    SetState(FlasherStates::kDownloadFirmwareFileFromUrl);
+                } else if (firmware_file_source_ == "server") {
+                    // Load firmware file from server
+                    emit ShowStatusMsg("Downloading");
+                    if (socket_client_->DownloadFirmwareFile(board_info_, selected_firmware_version_, file_content_)) {
+                        if (file_content_.isEmpty()) {
+                            emit ShowStatusMsg("Download error");
+                            SetState(FlasherStates::kIdle);
+                        } else {
+                            SetState(FlasherStates::kCheckSignature);
+                        }
+                    }
+
+                } else {
+                    // Unknown source, go to idle
+                    SetState(FlasherStates::kIdle);
+                }
             }
 
             break;
         }
 
-        case FlasherStates::kDownloadFirmwareFile: {
+        case FlasherStates::kDownloadFirmwareFileFromUrl: {
             if (is_firmware_downloaded_) {
                 is_firmware_downloaded_ = false;
                 if (!is_download_success_ || file_content_.isEmpty()) {
@@ -590,6 +607,8 @@ FlashingInfo Flasher::CrcCheck() {
         flashing_info.description = "CRC problem";
     }
 
+    file_content_.clear();
+
     return flashing_info;
 }
 
@@ -875,6 +894,13 @@ void Flasher::SetState(const FlasherStates& state) {
 
 void Flasher::SetSelectedFirmwareVersion(const QString& selected_firmware_version) {
     selected_firmware_version_ = selected_firmware_version;
+
+    foreach (const QJsonValue& value, product_info_) {
+        QJsonObject obj = value.toObject();
+        if (obj["fw_version"].toString() == selected_firmware_version_) {
+            firmware_file_source_ = obj["file_source"].toString();
+        }
+    }
 }
 
 void Flasher::TryToConnectConsole() {
@@ -923,6 +949,7 @@ void Flasher::DownloadFirmwareFromUrl() {
         if (obj["fw_version"].toString() == selected_firmware_version_) {
 
             QUrl firmware_url(obj["url"].toString());
+            timer_.start();
             file_downloader_->StartDownload(firmware_url);
             break;
         }

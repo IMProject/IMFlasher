@@ -49,7 +49,7 @@ enum class FlasherStates {
     kBrowseFirmware,
     kCheckBoardInfo,
     kLoadFirmwareFile,
-    kDownloadFirmwareFile,
+    kDownloadFirmwareFileFromUrl,
     kCheckSignature,
     kSendSignature,
     kVerifyFlasher,
