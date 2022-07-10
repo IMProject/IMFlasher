@@ -44,9 +44,12 @@ namespace socket {
 
 namespace {
 
-const QString kHeaderClientBoardInfo{"header_client_board_info"};
-const QString kHeaderClientProductInfo{"header_client_product_info"};
-const QString kHeaderServerProductInfo{"header_server_product_info"};
+const QString kHeaderClientBoardInfo{"client_board_info"};
+const QString kHeaderClientProductInfo{"client_product_info"};
+const QString kHeaderServerProductInfo{"server_product_info"};
+const QString kHeaderClientDownloadFirmware{"client_download_firmware"};
+const QString kHeaderServerDownloadFirmware{"server_download_firmware"};
+const QString kHeaderClientRequestData{"client_request_data"};
 
 } // namespace
 
@@ -54,6 +57,9 @@ const QString kHeaderServerProductInfo{"header_server_product_info"};
  * \brief The SocketClient class, contains socket client information
  */
 class SocketClient : public QTcpSocket {
+
+    Q_OBJECT
+
   public:
     /*!
      * \brief SocketClient constructor
@@ -83,6 +89,15 @@ class SocketClient : public QTcpSocket {
      */
     virtual bool ReceiveProductInfo(QJsonObject board_info, QJsonArray& product_info);
 
+    /*!
+     * \brief Download firmware file from the server
+     * \param board_info - Json object with board info from server
+     * \param fw_version - Firmware version to download
+     * \param firmware_file - Reference to firmware_file to download
+     * \return
+     */
+    virtual bool DownloadFirmwareFile(QJsonObject board_info, QString fw_version, QByteArray& firmware_file);
+
   private:
     /*!
      * \brief Method use to perform connect action
@@ -110,11 +125,24 @@ class SocketClient : public QTcpSocket {
     virtual bool ReadAll(QByteArray& data_out);
 
     /*!
-     * \brief Method used to send data
+     * \brief Method used to send QByteArray data
      * \param in_data - Byte array input data
      * \return True if data is successfully sent, false otherwise
      */
-    virtual bool SendData(const QByteArray& in_data);
+    virtual bool SendDataWithAck(const QByteArray& in_data);
+
+    /*!
+     * \brief Method used to send QJsonObject
+     * \param json_objec - QJsonObject input data
+     * \return True if data is successfully sent, false otherwise
+     */
+    virtual bool SendQJsonObject(const QJsonObject& json_objec);
+
+    /*!
+     * \brief Method used to request data from server
+     * \return True if data is successfully requested
+     */
+    virtual bool RequestData();
 
     /*!
      * \brief Method used to check acknowledge
@@ -122,10 +150,37 @@ class SocketClient : public QTcpSocket {
      */
     virtual bool CheckAck();
 
+    virtual bool WaitForReadyRead(int timeout);
+    virtual void ReadData(QByteArray& data_out);
+
+  public slots:
+    /*!
+     * \brief ReadyRead slot
+     */
+    void ReadyRead();
+
+  signals:
+
+    /*!
+     * \brief Signal download progress
+     * \param bytes_received - Number of received bytes
+     * \param bytes_total - Total number of bytes
+     */
+    void DownloadProgress(const qint64& bytes_received, const qint64& bytes_total);
+
+  private:
+
     quint16 server_port_;           //!< Server port
     QString server_address_;        //!< Server address
     QByteArray preshared_key_;      //!< Preshared key
     QJsonArray servers_array_;      //!< Server array
+
+    QByteArray socket_rx_data_;     //!< Byte Array work as an Rx buffer
+    int previous_rx_data_size_{0};  //!< Previous Rx data size
+
+    qint32 file_size_{0};           //!< Firmware file size
+
+    bool emit_progress{false};      //!< Flag for enabling/disabling emiting download prograss
 
     const QByteArray kAck{"ACK"};   //!< Byte array constant that presents ACKNOWLEDGE
 };

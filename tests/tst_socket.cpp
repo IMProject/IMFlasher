@@ -34,7 +34,7 @@ class MockSocket_1 : public socket::SocketClient {
     uint8_t read_array_index_ {0U};
 
     bool ReadAll(QByteArray& data_out) override;
-    bool SendData(const QByteArray& in_data) override;
+    bool SendDataWithAck(const QByteArray& in_data) override;
     bool waitForConnected(int msecs = 30000) override;
 };
 
@@ -43,7 +43,7 @@ bool MockSocket_1::ReadAll(QByteArray& data_out) {
     return true;
 }
 
-bool MockSocket_1::SendData(const QByteArray& in_data) {
+bool MockSocket_1::SendDataWithAck(const QByteArray& in_data) {
     send_data_.emplace_back(in_data);
     return true;
 }
@@ -82,7 +82,7 @@ class MockSocket_3 : public socket::SocketClient {
 
   private:
     bool ReadAll(QByteArray& data_out) override;
-    bool SendData(const QByteArray& in_data) override;
+    bool SendDataWithAck(const QByteArray& in_data) override;
     bool waitForConnected(int msecs = 30000) override;
 };
 
@@ -91,7 +91,7 @@ bool MockSocket_3::ReadAll(QByteArray& data_out) {
     return true;
 }
 
-bool MockSocket_3::SendData(const QByteArray& in_data) {
+bool MockSocket_3::SendDataWithAck(const QByteArray& in_data) {
     if (in_data.isEmpty()) {};
     return false;
 }
@@ -100,6 +100,18 @@ bool MockSocket_3::waitForConnected(int msecs) {
     if (msecs) {};
     return true;
 }
+
+namespace crc {
+uint32_t CalculateCrc32(
+    const uint8_t *data,
+    const uint32_t length,
+    const bool reflected_output,
+    const bool reflected_input) {
+
+    if (*data & length & reflected_output & reflected_input) {}
+    return 0x0;
+}
+} //namespace socket
 
 
 TestSocket::TestSocket() = default;
