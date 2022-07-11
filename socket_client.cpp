@@ -191,8 +191,8 @@ bool SocketClient::CheckAck() {
     QByteArray ack;
     success = ReadAll(ack);
 
-    if (success && (kAck == ack)) {
-        success = true;
+    if (success && (kAck != ack)) {
+        success = false;
     }
 
     return success;
