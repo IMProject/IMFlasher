@@ -263,7 +263,7 @@ bool SocketClient::ReceiveProductInfo(QJsonObject board_info, QJsonArray& produc
     return success;
 }
 
-bool SocketClient::DownloadFirmwareFile(QJsonObject board_info, QString fw_version, QByteArray& firmware_file) {
+bool SocketClient::DownloadFile(QJsonObject board_info, QString file_version, QByteArray& file) {
 
     qint32 file_crc;
 
@@ -271,9 +271,9 @@ bool SocketClient::DownloadFirmwareFile(QJsonObject board_info, QString fw_versi
 
     if (success) {
         QJsonObject packet_object;
-        packet_object.insert("header", kHeaderClientDownloadFirmware);
+        packet_object.insert("header", kHeaderClientDownloadFile);
         packet_object.insert("board_info", board_info);
-        packet_object.insert("fw_version", fw_version);
+        packet_object.insert("file_version", file_version);
 
         QJsonDocument json_data;
         json_data.setObject(packet_object);
@@ -293,7 +293,7 @@ bool SocketClient::DownloadFirmwareFile(QJsonObject board_info, QString fw_versi
         QJsonDocument json_data = QJsonDocument::fromJson(data);
         QJsonObject packet_object = json_data.object();
 
-        if (packet_object.value("header").toString() == kHeaderServerDownloadFirmware) {
+        if (packet_object.value("header").toString() == kHeaderServerDownloadFile) {
 
             file_crc = packet_object.value("file_crc").toInt();
             file_size_ = packet_object.value("file_size").toInt();
@@ -305,17 +305,17 @@ bool SocketClient::DownloadFirmwareFile(QJsonObject board_info, QString fw_versi
 
     if (success) {
         emit_progress = true;
-        success = RequestData(); // request firmware binary file
+        success = RequestData(); // request file
 
         if (success) {
-            success = ReadAll(firmware_file);
+            success = ReadAll(file);
 
             if (success) {
 
-                const uint8_t *data = reinterpret_cast<const uint8_t *>(firmware_file.data());
-                qint32 crc = crc::CalculateCrc32(data, firmware_file.size(), false, false);
+                const uint8_t *data = reinterpret_cast<const uint8_t *>(file.data());
+                qint32 crc = crc::CalculateCrc32(data, file.size(), false, false);
 
-                if ((firmware_file.size() != file_size_) || (crc != file_crc)) {
+                if ((file.size() != file_size_) || (crc != file_crc)) {
                     success = false;
                 }
             }

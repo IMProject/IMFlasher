@@ -58,7 +58,7 @@ constexpr int kCollectBoardInfoSerialTimeoutInMs {300};
 constexpr int kCrc32Size {4};
 constexpr int kBoardIdSize {32};
 constexpr int kTryToConnectTimeoutInMs {20000};
-constexpr int kTryToDownloadFirmwareTimeoutInMs {5000};
+constexpr int kTryToDownloadFileTimeoutInMs {5000};
 
 // Commands
 constexpr char kVerifyFlasherCmd[] = "IMFlasher_Verify";
@@ -147,19 +147,19 @@ void Flasher::Init() {
 
 void Flasher::FileDownloaded() {
     is_download_success_ = file_downloader_->GetDownloadedData(file_content_);
-    is_firmware_downloaded_ = true;
+    is_file_downloaded_ = true;
 }
 
-void Flasher::UpdateProgressBar(const quint64& sent_size, const quint64& firmware_size)
+void Flasher::UpdateProgressBar(const quint64& sent_size, const quint64& total_size)
 {
     int progress_percentage = 0;
-    if (firmware_size != 0) {
-        progress_percentage = (100 * sent_size) / firmware_size;
+    if (total_size != 0) {
+        progress_percentage = (100 * sent_size) / total_size;
     }
 
     if (last_progress_percentage_ != progress_percentage) {
         last_progress_percentage_ = progress_percentage;
-        qInfo() << sent_size << "/" << firmware_size << "B, " << progress_percentage << "%";
+        qInfo() << sent_size << "/" << total_size << "B, " << progress_percentage << "%";
         emit UpdateProgressBarSignal(progress_percentage);
     }
 }
@@ -247,7 +247,7 @@ void Flasher::LoopHandler() {
                 if (socket_client_->SendBoardInfo(board_info_, bl_version_, fw_version_)) {
                     if (socket_client_->ReceiveProductInfo(board_info_, product_info_)) {
                         if (!product_info_.empty()) {
-                            emit SetFirmwareList(product_info_);
+                            emit SetFileVersionsList(product_info_);
                         }
                     }
                 }
@@ -256,15 +256,15 @@ void Flasher::LoopHandler() {
             SetState(FlasherStates::kIdle);
             break;
 
-        case FlasherStates::kBrowseFirmware: {
+        case FlasherStates::kBrowseFile: {
             QString file_path = QFileDialog::getOpenFileName(nullptr,
-                                                             tr("Firmware binary"),
+                                                             tr("File binary"),
                                                              "",
                                                              tr("Binary (*.bin);;All Files (*)"));
 
             if (!file_path.isEmpty()) {
-                if (OpenFirmwareFile(file_path)) {
-                    emit ShowTextInBrowser("Firmware: " + file_path);
+                if (OpenFile(file_path)) {
+                    emit ShowTextInBrowser("File: " + file_path);
                     emit EnableLoadButton();
                 }
             }
@@ -273,23 +273,22 @@ void Flasher::LoopHandler() {
             break;
         }
 
-        case FlasherStates::kLoadFirmwareFile: {
+        case FlasherStates::kLoadFile: {
             if (SetLocalFileContent()) {
-                // Local firmware file
+                // Local file
                 SetState(FlasherStates::kCheckSignature);
 
             } else {
 
-                if (firmware_file_source_ == "url") {
-                    // Load firmware file from url
-                    DownloadFirmwareFromUrl();
+                if (file_source_ == "url") {
+                    DownloadFileFromUrl();
                     emit ShowStatusMsg("Downloading");
                     timer_.start();
-                    SetState(FlasherStates::kDownloadFirmwareFileFromUrl);
-                } else if (firmware_file_source_ == "server") {
-                    // Load firmware file from server
+                    SetState(FlasherStates::kDownloadFileFromUrl);
+                } else if (file_source_ == "server") {
+                    // Load file from server
                     emit ShowStatusMsg("Downloading");
-                    if (socket_client_->DownloadFirmwareFile(board_info_, selected_firmware_version_, file_content_)) {
+                    if (socket_client_->DownloadFile(board_info_, selected_file_version_, file_content_)) {
                         if (file_content_.isEmpty()) {
                             emit ShowStatusMsg("Download error");
                             SetState(FlasherStates::kIdle);
@@ -307,9 +306,9 @@ void Flasher::LoopHandler() {
             break;
         }
 
-        case FlasherStates::kDownloadFirmwareFileFromUrl: {
-            if (is_firmware_downloaded_) {
-                is_firmware_downloaded_ = false;
+        case FlasherStates::kDownloadFileFromUrl: {
+            if (is_file_downloaded_) {
+                is_file_downloaded_ = false;
                 if (!is_download_success_ || file_content_.isEmpty()) {
                     emit ShowStatusMsg("Download error");
                     SetState(FlasherStates::kIdle);
@@ -319,7 +318,7 @@ void Flasher::LoopHandler() {
 
             } else {
 
-                if (timer_.hasExpired(kTryToDownloadFirmwareTimeoutInMs)) {
+                if (timer_.hasExpired(kTryToDownloadFileTimeoutInMs)) {
                     emit ShowStatusMsg("Download timeout");
                     SetState(FlasherStates::kIdle);
                 }
@@ -502,14 +501,14 @@ void Flasher::LoopHandler() {
 
 FlashingInfo Flasher::Flash() {
     FlashingInfo flashing_info;
-    const qint64 firmware_size = file_content_.size() - signature_size_;
-    const qint64 num_of_packets = (firmware_size / kPacketSize);
-    const char *data_firmware = file_content_.data() + signature_size_;
+    const qint64 file_size = file_content_.size() - signature_size_;
+    const qint64 num_of_packets = (file_size / kPacketSize);
+    const char *data_file = file_content_.data() + signature_size_;
 
     // Send file in packages
     for (qint64 packet = 0; packet < num_of_packets; ++packet) {
-        const char *data_position = data_firmware + (packet * kPacketSize);
-        UpdateProgressBar((packet + 1U) * kPacketSize, firmware_size);
+        const char *data_position = data_file + (packet * kPacketSize);
+        UpdateProgressBar((packet + 1U) * kPacketSize, file_size);
         flashing_info.success = SendMessage(data_position, kPacketSize, kSerialTimeoutInMs);
 
         if (!flashing_info.success) {
@@ -520,11 +519,11 @@ FlashingInfo Flasher::Flash() {
     }
 
     if (flashing_info.success) {
-        const qint64 rest_size = firmware_size % kPacketSize;
+        const qint64 rest_size = file_size % kPacketSize;
 
         if (rest_size > 0) {
-            UpdateProgressBar(num_of_packets * kPacketSize + rest_size, firmware_size);
-            flashing_info.success = SendMessage(data_firmware + (num_of_packets * kPacketSize), rest_size, kSerialTimeoutInMs);
+            UpdateProgressBar(num_of_packets * kPacketSize + rest_size, file_size);
+            flashing_info.success = SendMessage(data_file + (num_of_packets * kPacketSize), rest_size, kSerialTimeoutInMs);
 
             if (!flashing_info.success) {
                 flashing_info.title = "Flashing process failed";
@@ -588,11 +587,11 @@ bool Flasher::CheckTrue() {
 
 FlashingInfo Flasher::CrcCheck() {
     FlashingInfo flashing_info;
-    const qint64 firmware_size = file_content_.size() - signature_size_;
-    const char *data_firmware = file_content_.data() + signature_size_;
+    const qint64 file_size = file_content_.size() - signature_size_;
+    const char *data_file = file_content_.data() + signature_size_;
 
-    const uint8_t *data = reinterpret_cast<const uint8_t *>(data_firmware);
-    uint32_t crc = crc::CalculateCrc32(data, firmware_size, false, false);
+    const uint8_t *data = reinterpret_cast<const uint8_t *>(data_file);
+    uint32_t crc = crc::CalculateCrc32(data, file_size, false, false);
     QByteArray crc_data;
     crc_data.setNum(crc);
 
@@ -759,10 +758,10 @@ bool Flasher::IsReadProtectionEnabled() const {
     return is_read_protection_enabled_;
 }
 
-bool Flasher::OpenFirmwareFile(const QString& file_path) {
-    firmware_file_.setFileName(file_path);
+bool Flasher::OpenFile(const QString& file_path) {
+    file_to_flash_.setFileName(file_path);
 
-    return firmware_file_.open(QIODevice::ReadOnly);
+    return file_to_flash_.open(QIODevice::ReadOnly);
 }
 
 void Flasher::ReconnectingToBoard() {
@@ -791,10 +790,10 @@ void Flasher::ReconnectingToBoard() {
 
 FlashingInfo Flasher::SendFileSize() {
     FlashingInfo flashing_info;
-    const qint64 firmware_size = file_content_.size() - signature_size_;
-    QByteArray file_size;
-    file_size.setNum(firmware_size);
-    flashing_info.success = SendMessage(file_size.data(), file_size.size(), kSerialTimeoutInMs);
+    const qint64 file_size = file_content_.size() - signature_size_;
+    QByteArray file_size_bytes;
+    file_size_bytes.setNum(file_size);
+    flashing_info.success = SendMessage(file_size_bytes.data(), file_size_bytes.size(), kSerialTimeoutInMs);
 
     if (!flashing_info.success) {
         flashing_info.title = "Flashing process failed";
@@ -819,7 +818,7 @@ FlashingInfo Flasher::SendSignature() {
 
         bool continue_without_signature = true;
         if (is_signature_warning_enabled_) {
-            continue_without_signature = ShowInfoMsg("No signature detected!", "Flashing without a signature is not safe. Flasher will assume that firmware is without signature.");
+            continue_without_signature = ShowInfoMsg("No signature detected!", "Flashing without a signature is not safe. Flasher will assume that file is without signature.");
         }
 
         if (continue_without_signature) {
@@ -880,9 +879,9 @@ void Flasher::SendFlashCommand() {
 }
 
 bool Flasher::SetLocalFileContent() {
-    if (firmware_file_.isOpen()) {
-        file_content_ = firmware_file_.readAll();
-        firmware_file_.close();
+    if (file_to_flash_.isOpen()) {
+        file_content_ = file_to_flash_.readAll();
+        file_to_flash_.close();
         return true;
     }
     return false;
@@ -892,13 +891,13 @@ void Flasher::SetState(const FlasherStates& state) {
     state_ = state;
 }
 
-void Flasher::SetSelectedFirmwareVersion(const QString& selected_firmware_version) {
-    selected_firmware_version_ = selected_firmware_version;
+void Flasher::SetSelectedFileVersion(const QString& selected_file_version) {
+    selected_file_version_ = selected_file_version;
 
     foreach (const QJsonValue& value, product_info_) {
         QJsonObject obj = value.toObject();
-        if (obj["fw_version"].toString() == selected_firmware_version_) {
-            firmware_file_source_ = obj["file_source"].toString();
+        if (obj["file_version"].toString() == selected_file_version_) {
+            file_source_ = obj["file_source"].toString();
         }
     }
 }
@@ -943,14 +942,14 @@ void Flasher::TryToConnect() {
     }
 }
 
-void Flasher::DownloadFirmwareFromUrl() {
+void Flasher::DownloadFileFromUrl() {
     foreach (const QJsonValue& value, product_info_) {
         QJsonObject obj = value.toObject();
-        if (obj["fw_version"].toString() == selected_firmware_version_) {
+        if (obj["file_version"].toString() == selected_file_version_) {
 
-            QUrl firmware_url(obj["url"].toString());
+            QUrl file_url(obj["url"].toString());
             timer_.start();
-            file_downloader_->StartDownload(firmware_url);
+            file_downloader_->StartDownload(file_url);
             break;
         }
     }
