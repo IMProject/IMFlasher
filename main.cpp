@@ -69,11 +69,11 @@ int main(int argc, char *argv[]) {
                     }
 
                 } else if (0 == QString::compare("flash", action, Qt::CaseInsensitive)) {
-                    if (flasher->OpenFirmwareFile(file_path) && flasher->SetLocalFileContent()) {
+                    if (flasher->OpenFile(file_path) && flasher->SetLocalFileContent()) {
                         flasher::FlashingInfo flashing_info = flasher->ConsoleFlash();
                         qInfo() << flashing_info.description;
                     } else {
-                        qInfo() << "Open firmware file error";
+                        qInfo() << "Open file error";
                     }
                 } else {
                     qInfo() << "Select flash or erase";

@@ -116,7 +116,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="browseFirmware">
+       <widget class="QPushButton" name="browseFile">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
           <horstretch>0</horstretch>
@@ -135,14 +135,14 @@
        </widget>
       </item>
       <item>
-       <widget class="QComboBox" name="availableFirmware">
+       <widget class="QComboBox" name="availableFileVersions">
         <property name="layoutDirection">
          <enum>Qt::LeftToRight</enum>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="loadFirmware">
+       <widget class="QPushButton" name="loadFile">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
           <horstretch>0</horstretch>
@@ -197,7 +197,7 @@
      <x>0</x>
      <y>0</y>
      <width>900</width>
-     <height>22</height>
+     <height>19</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuCalls">

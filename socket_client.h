@@ -47,8 +47,8 @@ namespace {
 const QString kHeaderClientBoardInfo{"client_board_info"};
 const QString kHeaderClientProductInfo{"client_product_info"};
 const QString kHeaderServerProductInfo{"server_product_info"};
-const QString kHeaderClientDownloadFirmware{"client_download_firmware"};
-const QString kHeaderServerDownloadFirmware{"server_download_firmware"};
+const QString kHeaderClientDownloadFile{"client_download_file"};
+const QString kHeaderServerDownloadFile{"server_download_file"};
 const QString kHeaderClientRequestData{"client_request_data"};
 
 } // namespace
@@ -90,13 +90,13 @@ class SocketClient : public QTcpSocket {
     virtual bool ReceiveProductInfo(QJsonObject board_info, QJsonArray& product_info);
 
     /*!
-     * \brief Download firmware file from the server
+     * \brief Download file from the server
      * \param board_info - Json object with board info from server
-     * \param fw_version - Firmware version to download
-     * \param firmware_file - Reference to firmware_file to download
+     * \param file_version - File version to download
+     * \param file_content - Reference to file_content to download
      * \return
      */
-    virtual bool DownloadFirmwareFile(QJsonObject board_info, QString fw_version, QByteArray& firmware_file);
+    virtual bool DownloadFile(QJsonObject board_info, QString file_version, QByteArray& file_content);
 
   private:
     /*!
@@ -178,7 +178,7 @@ class SocketClient : public QTcpSocket {
     QByteArray socket_rx_data_;     //!< Byte Array work as an Rx buffer
     int previous_rx_data_size_{0};  //!< Previous Rx data size
 
-    qint32 file_size_{0};           //!< Firmware file size
+    qint32 file_size_{0};           //!< File size
 
     bool emit_progress{false};      //!< Flag for enabling/disabling emiting download prograss
 

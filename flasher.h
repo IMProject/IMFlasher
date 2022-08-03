@@ -119,11 +119,11 @@ class Flasher : public QObject {
     bool IsReadProtectionEnabled() const;
 
     /*!
-     * \brief Open firmware file
-     * \param file_path - File(firmware) path
+     * \brief Open file
+     * \param file_path - File path
      * \return True if file is successfully opened, false otherwise
      */
-    bool OpenFirmwareFile(const QString& file_path);
+    bool OpenFile(const QString& file_path);
 
     /*!
      * \brief Send enter bootloader command
@@ -149,10 +149,10 @@ class Flasher : public QObject {
     void SetState(const FlasherStates& state);
 
     /*!
-     * \brief Set selected firmware version
-     * \param selected_firmware_version - Firmware version that will be set
+     * \brief Set selected file version
+     * \param selected_file_version - File version that will be set
      */
-    void SetSelectedFirmwareVersion(const QString& selected_firmware_version);
+    void SetSelectedFileVersion(const QString& selected_file_version);
 
     /*!
      * \brief Try to connect to the board over console
@@ -162,9 +162,9 @@ class Flasher : public QObject {
     /*!
     * \brief Update progress bar
     * \param sent_size - Size that is sent
-    * \param firmware_size - Firmware size
+    * \param total_size - Total size
     */
-   void UpdateProgressBar(const quint64& sent_size, const quint64& firmware_size);
+   void UpdateProgressBar(const quint64& sent_size, const quint64& total_size);
 
   signals:
     /*!
@@ -243,10 +243,10 @@ class Flasher : public QObject {
     void EnableLoadButton();
 
     /*!
-     * \brief Set firmware list signal
+     * \brief Set file versions list signal
      * \param product_info - Json array that contains product information
      */
-    void SetFirmwareList(const QJsonArray& product_info);
+    void SetFileVersionsList(const QJsonArray& product_info);
 
   public slots:
     /*!
@@ -278,17 +278,17 @@ class Flasher : public QObject {
     QJsonObject bl_version_;                                                //!< Bootloader version
     QJsonObject fw_version_;                                                //!< Firmware version
     QJsonArray product_info_;                                               //!< Product information
-    QString selected_firmware_version_;                                     //!< Selected firmware version
-    QString firmware_file_source_;                                          //!< Firmware file source (URL or Server)
+    QString selected_file_version_;                                         //!< Selected file version
+    QString file_source_;                                                   //!< File source (URL or Server)
     QFile config_file_;                                                     //!< Configuration file
-    QFile firmware_file_;                                                   //!< Firmware file
-    qint64 signature_size_{0};                                              //!< Firmware signature size
+    QFile file_to_flash_;                                                   //!< File to flash
+    qint64 signature_size_{0};                                              //!< Signature size
     quint8 last_progress_percentage_{0};                                    //!< Last progress percentage
     bool is_bootloader_ {false};                                            //!< Is bootloader detected flag
     bool is_bootloader_expected_ {false};                                   //!< Is bootloader expected after board reset
     bool is_read_protection_enabled_ {false};                               //!< Is read protection enabled flag
     bool is_timer_started_ {false};                                         //!< Is timer started flag
-    bool is_firmware_downloaded_{false};                                    //!< Is firmware downloaded flag
+    bool is_file_downloaded_{false};                                        //!< Is file downloaded flag
     bool is_download_success_{false};                                       //!< Is download successfully done
     bool is_signature_warning_enabled_{false};                              //!< Is signature warning enabled
     QByteArray file_content_;                                               //!< File content
@@ -329,9 +329,9 @@ class Flasher : public QObject {
     void CreateDefaultConfigFile();
 
     /*!
-     * \brief Method used to donwload firmware file from URL
+     * \brief Method used to donwload file from URL
      */
-    void DownloadFirmwareFromUrl();
+    void DownloadFileFromUrl();
 
     /*!
      * \brief Method used to perform flash process

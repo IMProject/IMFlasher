@@ -67,14 +67,14 @@ class MainWindow : public QMainWindow {
 
   private slots:
     /*!
-     * \brief on_browseFirmware_clicked
+     * \brief on_browseFile_clicked
      */
-    void on_browseFirmware_clicked();
+    void on_browseFile_clicked();
 
     /*!
-     * \brief on_loadFirmware_clicked
+     * \brief on_loadFile_clicked
      */
-    void on_loadFirmware_clicked();
+    void on_loadFile_clicked();
 
     /*!
      * \brief on_enterBootloader_clicked
@@ -133,10 +133,10 @@ class MainWindow : public QMainWindow {
     void ShowStatusMessage(const QString& message);
 
     /*!
-     * \brief Method used to set firmware list
+     * \brief Method used to set file list
      * \param product_info - Json array that presents product information
      */
-    void SetFirmwareList(const QJsonArray& product_info);
+    void SetFileList(const QJsonArray& product_info);
 };
 
 } // namespace gui
