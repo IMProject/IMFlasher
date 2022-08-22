@@ -90,6 +90,12 @@ class Flasher : public QObject {
     bool CollectBoardInfo();
 
     /*!
+     * \brief Method used to collect security data
+     * \return True if data is successfully collected, false otherwise
+     */
+    bool CollectSecurityDataFromBoard();
+
+    /*!
      * \brief Method used to flash from the console
      * \return Flashing information
      */
@@ -164,7 +170,7 @@ class Flasher : public QObject {
     * \param sent_size - Size that is sent
     * \param total_size - Total size
     */
-   void UpdateProgressBar(const quint64& sent_size, const quint64& total_size);
+    void UpdateProgressBar(const quint64& sent_size, const quint64& total_size);
 
   signals:
     /*!
@@ -275,6 +281,8 @@ class Flasher : public QObject {
   private:
     QString board_id_;                                                      //!< Board ID
     QJsonObject board_info_;                                                //!< Board information
+    QJsonObject client_security_data_;                                      //!< Security data client
+    QJsonObject server_security_data_;                                      //!< Security data server
     QJsonObject bl_version_;                                                //!< Bootloader version
     QJsonObject fw_version_;                                                //!< Firmware version
     QJsonArray product_info_;                                               //!< Product information
@@ -283,6 +291,7 @@ class Flasher : public QObject {
     QFile config_file_;                                                     //!< Configuration file
     QFile file_to_flash_;                                                   //!< File to flash
     qint64 signature_size_{0};                                              //!< Signature size
+    qint64 packet_size_{0};                                                 //!< Size of the packets that will be used to send data for flashing
     quint8 last_progress_percentage_{0};                                    //!< Last progress percentage
     bool is_bootloader_ {false};                                            //!< Is bootloader detected flag
     bool is_bootloader_expected_ {false};                                   //!< Is bootloader expected after board reset
@@ -393,6 +402,12 @@ class Flasher : public QObject {
      * \return True if message is sent correctly, false otherwise
      */
     bool SendMessage(const char *data, qint64 length, int timeout_ms);
+
+    /*!
+     * \brief Method used to send server security data to the bootloader
+     * \return Flashing info structure
+     */
+    FlashingInfo SendServerSecurityData();
 
     /*!
      * \brief Method used to send signature to the bootloader

@@ -92,11 +92,13 @@ class SocketClient : public QTcpSocket {
     /*!
      * \brief Download file from the server
      * \param board_info - Json object with board info from server
+     * \param client_security_data - Json object to sending security data from the client
      * \param file_version - File version to download
+     * \param server_security_data - Json object to getting security data from the server
      * \param file_content - Reference to file_content to download
      * \return
      */
-    virtual bool DownloadFile(QJsonObject board_info, QString file_version, QByteArray& file_content);
+    virtual bool DownloadFile(const QJsonObject board_info, const QJsonObject client_security_data, const QString file_version, QJsonObject& server_security_data, QByteArray& file_content);
 
   private:
     /*!

@@ -51,10 +51,10 @@ namespace {
 constexpr qint64 kSignatureSize {64};
 constexpr int kEraseTimeoutInMs {5000};
 constexpr qint64 kPacketSize {256};
+constexpr qint64 kSecurePacketSize {296};
 constexpr unsigned long kThreadSleepTimeInMs {100U};
 constexpr int kSerialTimeoutInMs {100};
-constexpr int kCollectBoardIdSerialTimeoutInMs {300};
-constexpr int kCollectBoardInfoSerialTimeoutInMs {300};
+constexpr int kCollectDataTimeoutInMs {300};
 constexpr int kCrc32Size {4};
 constexpr int kBoardIdSize {32};
 constexpr int kTryToConnectTimeoutInMs {20000};
@@ -65,6 +65,7 @@ constexpr char kVerifyFlasherCmd[] = "IMFlasher_Verify";
 constexpr char kEraseCmd[] = "erase";
 constexpr char kVersionCmd[] = "version";
 constexpr char kSoftwareInfoJsonCmd[] = "software_info_json";
+constexpr char kSecurityJsonCmd[] = "security_json";
 constexpr char kBoardIdCmd[] = "board_id";
 constexpr char kBoardInfoJsonCmd[] = "board_info_json";
 constexpr char kFlashFwCmd[] = "flash_fw";
@@ -150,8 +151,7 @@ void Flasher::FileDownloaded() {
     is_file_downloaded_ = true;
 }
 
-void Flasher::UpdateProgressBar(const quint64& sent_size, const quint64& total_size)
-{
+void Flasher::UpdateProgressBar(const quint64& sent_size, const quint64& total_size) {
     int progress_percentage = 0;
     if (total_size != 0) {
         progress_percentage = (100 * sent_size) / total_size;
@@ -280,21 +280,36 @@ void Flasher::LoopHandler() {
 
             } else {
 
+                packet_size_ = kPacketSize;
                 if (file_source_ == "url") {
                     DownloadFileFromUrl();
                     emit ShowStatusMsg("Downloading");
                     timer_.start();
                     SetState(FlasherStates::kDownloadFileFromUrl);
+
                 } else if (file_source_ == "server") {
                     // Load file from server
                     emit ShowStatusMsg("Downloading");
-                    if (socket_client_->DownloadFile(board_info_, selected_file_version_, file_content_)) {
+
+                    CollectSecurityDataFromBoard();
+
+                    if (socket_client_->DownloadFile(board_info_, client_security_data_, selected_file_version_, server_security_data_, file_content_)) {
                         if (file_content_.isEmpty()) {
                             emit ShowStatusMsg("Download error");
                             SetState(FlasherStates::kIdle);
                         } else {
-                            SetState(FlasherStates::kCheckSignature);
+
+                            packet_size_ = kSecurePacketSize;
+                            emit ShowTextInBrowser("Secure connection detected!");
+
+                            if (client_security_data_.empty() || server_security_data_.empty()) {
+                                SetState(FlasherStates::kCheckSignature);
+                            } else {
+                                SetState(FlasherStates::kSendServerSecurityData);
+                            }
                         }
+                    } else {
+                        SetState(FlasherStates::kIdle);
                     }
 
                 } else {
@@ -324,6 +339,19 @@ void Flasher::LoopHandler() {
                 }
             }
 
+            break;
+        }
+
+        case FlasherStates::kSendServerSecurityData: {
+
+            FlashingInfo flashing_info = SendServerSecurityData();
+            if (flashing_info.success) {
+                SetState(FlasherStates::kCheckSignature);
+            } else {
+                emit ClearStatusMsg();
+                ShowInfoMsg(flashing_info.title, flashing_info.description);
+                SetState(FlasherStates::kIdle);
+            }
             break;
         }
 
@@ -502,14 +530,14 @@ void Flasher::LoopHandler() {
 FlashingInfo Flasher::Flash() {
     FlashingInfo flashing_info;
     const qint64 file_size = file_content_.size() - signature_size_;
-    const qint64 num_of_packets = (file_size / kPacketSize);
+    const qint64 num_of_packets = (file_size / packet_size_);
     const char *data_file = file_content_.data() + signature_size_;
 
     // Send file in packages
     for (qint64 packet = 0; packet < num_of_packets; ++packet) {
-        const char *data_position = data_file + (packet * kPacketSize);
-        UpdateProgressBar((packet + 1U) * kPacketSize, file_size);
-        flashing_info.success = SendMessage(data_position, kPacketSize, kSerialTimeoutInMs);
+        const char *data_position = data_file + (packet * packet_size_);
+        UpdateProgressBar((packet + 1U) * packet_size_, file_size);
+        flashing_info.success = SendMessage(data_position, packet_size_, kSerialTimeoutInMs);
 
         if (!flashing_info.success) {
             flashing_info.title = "Flashing process failed";
@@ -519,11 +547,11 @@ FlashingInfo Flasher::Flash() {
     }
 
     if (flashing_info.success) {
-        const qint64 rest_size = file_size % kPacketSize;
+        const qint64 rest_size = file_size % packet_size_;
 
         if (rest_size > 0) {
-            UpdateProgressBar(num_of_packets * kPacketSize + rest_size, file_size);
-            flashing_info.success = SendMessage(data_file + (num_of_packets * kPacketSize), rest_size, kSerialTimeoutInMs);
+            UpdateProgressBar(num_of_packets * packet_size_ + rest_size, file_size);
+            flashing_info.success = SendMessage(data_file + (num_of_packets * packet_size_), rest_size, kSerialTimeoutInMs);
 
             if (!flashing_info.success) {
                 flashing_info.title = "Flashing process failed";
@@ -615,7 +643,7 @@ bool Flasher::CollectBoardId() {
     bool success = false;
 
     QByteArray out_data;
-    if (ReadMessageWithCrc(kBoardIdCmd, sizeof(kBoardIdCmd), kCollectBoardIdSerialTimeoutInMs, out_data)) {
+    if (ReadMessageWithCrc(kBoardIdCmd, sizeof(kBoardIdCmd), kCollectDataTimeoutInMs, out_data)) {
 
         if (out_data.size() == kBoardIdSize) {
             board_id_ = out_data.toBase64();
@@ -635,7 +663,7 @@ bool Flasher::CollectBoardInfo() {
     bool success = false;
 
     QByteArray out_data;
-    if (ReadMessageWithCrc(kBoardInfoJsonCmd, sizeof(kBoardInfoJsonCmd), kCollectBoardInfoSerialTimeoutInMs, out_data)) {
+    if (ReadMessageWithCrc(kBoardInfoJsonCmd, sizeof(kBoardInfoJsonCmd), kCollectDataTimeoutInMs, out_data)) {
         QJsonDocument json_document = QJsonDocument::fromJson(QString(out_data).toUtf8());
         board_info_ = json_document.object();
         if (!board_info_.empty()) {
@@ -648,6 +676,25 @@ bool Flasher::CollectBoardInfo() {
 
     if (!success) {
         qInfo() << "Board info error";
+    }
+
+    return success;
+}
+
+bool Flasher::CollectSecurityDataFromBoard() {
+    bool success = false;
+
+    QByteArray out_data;
+    if (ReadMessageWithCrc(kSecurityJsonCmd, sizeof(kSecurityJsonCmd), kCollectDataTimeoutInMs, out_data)) {
+        QJsonDocument json_document = QJsonDocument::fromJson(QString(out_data).toUtf8());
+        client_security_data_ = json_document.object();
+        if (!client_security_data_.empty()) {
+            success = true;
+        }
+    }
+
+    if (!success) {
+        qInfo() << "Security data error";
     }
 
     return success;
@@ -724,6 +771,8 @@ bool Flasher::GetVersionJson(QJsonObject& out_json_object) {
         software_info.append(out_json_object.value("git_tag").toString());
         software_info.append("\nRunning from: ");
         software_info.append(out_json_object.value("ld_script_variant").toString());
+        software_info.append("\nBuild variant: ");
+        software_info.append(out_json_object.value("build_variant").toString());
         emit ShowTextInBrowser(software_info);
 
         success = true;
@@ -807,6 +856,21 @@ bool Flasher::SendMessage(const char *data, qint64 length, int timeout_ms) {
     serial_port_.write(data, length);
     serial_port_.WaitForReadyRead(timeout_ms);
     return CheckAck();
+}
+
+FlashingInfo Flasher::SendServerSecurityData() {
+    FlashingInfo flashing_info;
+
+    QByteArray security_data = QJsonDocument(server_security_data_).toJson(QJsonDocument::Compact);
+    flashing_info.success = SendMessage(security_data.data(), security_data.size(), kSerialTimeoutInMs);
+    security_data.clear();
+
+    if (!flashing_info.success) {
+        flashing_info.title = "Flashing process failed";
+        flashing_info.description = "Board rejected server security data";
+    }
+
+    return flashing_info;
 }
 
 FlashingInfo Flasher::SendSignature() {
