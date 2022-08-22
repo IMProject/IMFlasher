@@ -50,6 +50,7 @@ enum class FlasherStates {
     kCheckBoardInfo,
     kLoadFile,
     kDownloadFileFromUrl,
+    kSendServerSecurityData,
     kCheckSignature,
     kSendSignature,
     kVerifyFlasher,

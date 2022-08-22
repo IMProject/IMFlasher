@@ -263,7 +263,7 @@ bool SocketClient::ReceiveProductInfo(QJsonObject board_info, QJsonArray& produc
     return success;
 }
 
-bool SocketClient::DownloadFile(QJsonObject board_info, QString file_version, QByteArray& file) {
+bool SocketClient::DownloadFile(const QJsonObject board_info, const QJsonObject client_security_data, const QString file_version, QJsonObject& server_security_data, QByteArray& file) {
 
     qint32 file_crc;
 
@@ -274,6 +274,7 @@ bool SocketClient::DownloadFile(QJsonObject board_info, QString file_version, QB
         packet_object.insert("header", kHeaderClientDownloadFile);
         packet_object.insert("board_info", board_info);
         packet_object.insert("file_version", file_version);
+        packet_object.insert("client_security_data", client_security_data);
 
         QJsonDocument json_data;
         json_data.setObject(packet_object);
@@ -297,6 +298,7 @@ bool SocketClient::DownloadFile(QJsonObject board_info, QString file_version, QB
 
             file_crc = packet_object.value("file_crc").toInt();
             file_size_ = packet_object.value("file_size").toInt();
+            server_security_data = packet_object.value("server_security_data").toObject();
 
         } else {
             success = false;
