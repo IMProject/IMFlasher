@@ -234,6 +234,11 @@ class Flasher : public QObject {
     void DisableAllButtons();
 
     /*!
+     * \brief Disable all buttons signal
+     */
+    void DisableBrowseFileButton();
+
+    /*!
      * \brief Enable connect button, connect button is enabled and disconnect button disabled
      */
     void EnableConnectButton();

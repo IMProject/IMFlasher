@@ -112,6 +112,11 @@ class MainWindow : public QMainWindow {
     void DisableAllButtons();
 
     /*!
+     * \brief Method used to disable browse file button
+     */
+    void DisableBrowseFileButton();
+
+    /*!
      * \brief Method used to enable connect button and disable disconnect button
      */
     void EnableConnectButton();
