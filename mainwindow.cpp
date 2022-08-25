@@ -97,6 +97,7 @@ MainWindow::MainWindow(std::shared_ptr<flasher::Flasher> flasher) :
     });
 
     connect(flasher_.get(), &flasher::Flasher::DisableAllButtons, this, &MainWindow::DisableAllButtons);
+    connect(flasher_.get(), &flasher::Flasher::DisableBrowseFileButton, this, &MainWindow::DisableBrowseFileButton);
     connect(flasher_.get(), &flasher::Flasher::EnableLoadButton, this, [&] { ui_.loadFile->setEnabled(true); });
     connect(flasher_.get(), &flasher::Flasher::SetFileVersionsList, this, &MainWindow::SetFileList);
 }
@@ -114,6 +115,10 @@ void MainWindow::DisableAllButtons() {
     ui_.browseFile->setEnabled(false);
     ui_.loadFile->setEnabled(false);
     ui_.protectButton->setEnabled(false);
+}
+
+void MainWindow::DisableBrowseFileButton() {
+    ui_.browseFile->setEnabled(false);
 }
 
 void MainWindow::SetFileList(const QJsonArray& product_info) {

@@ -189,6 +189,10 @@ void Flasher::LoopHandler() {
                     GetVersionJson(bl_version_);
                     if (bl_version_.empty()) {
                         GetVersion();
+                    } else {
+                        if ("secured" == bl_version_.value("build_variant").toString()) {
+                            emit DisableBrowseFileButton();
+                        }
                     }
                     SetState(FlasherStates::kCheckBoardInfo);
                 } else {
