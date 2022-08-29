@@ -36,6 +36,7 @@ class MockSocket_1 : public socket::SocketClient {
     bool ReadAll(QByteArray& data_out) override;
     bool SendDataWithAck(const QByteArray& in_data) override;
     bool waitForConnected(int msecs = 30000) override;
+    bool waitForBytesWritten(int msecs = 30000) override;
 };
 
 bool MockSocket_1::ReadAll(QByteArray& data_out) {
@@ -53,6 +54,10 @@ bool MockSocket_1::waitForConnected(int msecs) {
     return true;
 }
 
+bool MockSocket_1::waitForBytesWritten(int msecs) {
+    if (msecs) {};
+    return true;
+}
 
 class MockSocket_2 : public socket::SocketClient {
   public:
