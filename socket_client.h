@@ -179,6 +179,7 @@ class SocketClient : public QTcpSocket {
 
     QByteArray socket_rx_data_;     //!< Byte Array work as an Rx buffer
     int previous_rx_data_size_{0};  //!< Previous Rx data size
+    int retry_number_{0};           //!< Data catch number retries
 
     qint32 file_size_{0};           //!< File size
 

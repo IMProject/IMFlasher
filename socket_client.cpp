@@ -45,8 +45,9 @@ namespace socket {
 
 namespace {
 
-constexpr int kMaxNoDataPeriod {10}; //!< Max time in [ms] while waiting
-constexpr qint64 kSocketTimeout {1000};
+constexpr int kMaxNoDataRetry {150};     //!< Max number of retries with no data
+constexpr int kMaxNoDataPeriod {1};    //!< Max time in [ms] while waiting
+constexpr qint64 kSocketTimeout {2000};
 
 } // namespace
 
@@ -60,6 +61,8 @@ SocketClient::~SocketClient() = default;
 
 void SocketClient::ReadyRead() {
     socket_rx_data_.append(readAll());
+
+    retry_number_ = 0;
 
     if (emit_progress) {
         emit DownloadProgress(socket_rx_data_.size(), file_size_);
@@ -78,10 +81,14 @@ bool SocketClient::WaitForReadyRead(int timeout = 0) {
         waitForReadyRead(1); //known workaround for triggering readyRead signal(https://bugreports.qt.io/browse/QTBUG-78086)
 
         int current_rx_data_size = socket_rx_data_.size();
-        if ((current_rx_data_size == previous_rx_data_size_) && (current_rx_data_size != 0)) {
+        if ((retry_number_ >= kMaxNoDataRetry) && (current_rx_data_size == previous_rx_data_size_) && (current_rx_data_size != 0)) {
             // No new data. Ready to read, exit the loop.
             success = true;
             break;
+        }
+
+        if (retry_number_ < kMaxNoDataRetry) {
+            ++retry_number_;
         }
 
         previous_rx_data_size_ = current_rx_data_size;
