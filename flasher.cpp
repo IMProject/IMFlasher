@@ -278,13 +278,13 @@ void Flasher::LoopHandler() {
         }
 
         case FlasherStates::kLoadFile: {
+            packet_size_ = kPacketSize;
             if (SetLocalFileContent()) {
                 // Local file
                 SetState(FlasherStates::kCheckSignature);
 
             } else {
 
-                packet_size_ = kPacketSize;
                 if (file_source_ == "url") {
                     DownloadFileFromUrl();
                     emit ShowStatusMsg("Downloading");
