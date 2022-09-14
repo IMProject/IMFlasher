@@ -205,22 +205,22 @@ bool SocketClient::CheckAck() {
     return success;
 }
 
-bool SocketClient::SendBoardInfo(QJsonObject board_info, QJsonObject bl_version, QJsonObject fw_version) {
+bool SocketClient::SendBoardInfo(QJsonObject board_info, QJsonObject bl_sw_info, QJsonObject fw_sw_info) {
     bool success = Connect();
 
     if (success) {
 
-        QJsonObject app_version;
-        app_version.insert("app_branch", GIT_BRANCH);
-        app_version.insert("app_hash", GIT_HASH);
-        app_version.insert("app_tag", GIT_TAG);
+        QJsonObject app_sw_info;
+        app_sw_info.insert("app_branch", GIT_BRANCH);
+        app_sw_info.insert("app_hash", GIT_HASH);
+        app_sw_info.insert("app_tag", GIT_TAG);
 
         QJsonObject packet_object;
         packet_object.insert("header", kHeaderClientBoardInfo);
         packet_object.insert("board_info", board_info);
-        packet_object.insert("bl_version", bl_version);
-        packet_object.insert("fw_version", fw_version);
-        packet_object.insert("app_version", app_version);
+        packet_object.insert("bl_sw_info", bl_sw_info);
+        packet_object.insert("fw_sw_info", fw_sw_info);
+        packet_object.insert("app_sw_info", app_sw_info);
 
         success = SendQJsonObject(packet_object);
 
@@ -234,13 +234,14 @@ bool SocketClient::SendBoardInfo(QJsonObject board_info, QJsonObject bl_version,
     return success;
 }
 
-bool SocketClient::ReceiveProductInfo(QJsonObject board_info, QJsonArray& product_info) {
+bool SocketClient::ReceiveProductInfo(QJsonObject board_info, QJsonObject bl_sw_info, QJsonArray& product_info, bool& is_secure_communication) {
     bool success = Connect();
 
     if (success) {
         QJsonObject packet_object;
         packet_object.insert("header", kHeaderClientProductInfo);
         packet_object.insert("board_info", board_info);
+        packet_object.insert("bl_sw_info", bl_sw_info);
 
         success = SendQJsonObject(packet_object);
     }
@@ -259,6 +260,7 @@ bool SocketClient::ReceiveProductInfo(QJsonObject board_info, QJsonArray& produc
 
             if (packet_object.value("header").toString() == kHeaderServerProductInfo) {
                 product_info = packet_object.value("product_info").toArray();
+                is_secure_communication = packet_object.value("secure_communication").toBool();
             } else {
                 success = false;
             }

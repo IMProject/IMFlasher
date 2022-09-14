@@ -186,18 +186,21 @@ void Flasher::LoopHandler() {
                 emit SetButtons(is_bootloader_);
 
                 if (is_bootloader_) {
-                    GetVersionJson(bl_version_);
-                    if (bl_version_.empty()) {
+                    GetVersionJson(bl_sw_info);
+                    if (bl_sw_info.empty()) {
                         GetVersion();
                     } else {
-                        if ("secured" == bl_version_.value("build_variant").toString()) {
+                        if ("secured" == bl_sw_info.value("build_variant").toString()) {
                             emit DisableBrowseFileButton();
+                            is_secure_bootloader_ = true;
+                        } else {
+                            is_secure_bootloader_ = false;
                         }
                     }
                     SetState(FlasherStates::kCheckBoardInfo);
                 } else {
-                    GetVersionJson(fw_version_);
-                    if (fw_version_.empty()) {
+                    GetVersionJson(fw_sw_info);
+                    if (fw_sw_info.empty()) {
                         GetVersion();
                     }
                     SetState(FlasherStates::kIdle);
@@ -248,14 +251,19 @@ void Flasher::LoopHandler() {
 
         case FlasherStates::kServerDataExchange:
             if (!board_info_.empty() && socket_client_) {
-                if (socket_client_->SendBoardInfo(board_info_, bl_version_, fw_version_)) {
-                    if (socket_client_->ReceiveProductInfo(board_info_, product_info_)) {
+                if (socket_client_->SendBoardInfo(board_info_, bl_sw_info, fw_sw_info)) {
+                    if (socket_client_->ReceiveProductInfo(board_info_, bl_sw_info, product_info_, is_secure_communication_)) {
                         if (!product_info_.empty()) {
                             emit SetFileVersionsList(product_info_);
                         }
                     }
+
+                    if (is_secure_communication_ != is_secure_bootloader_) {
+                        emit ShowTextInBrowser("Bootloader variant is incompatible with the server!");
+                    }
                 }
             }
+            emit ClearStatusMsg();
 
             SetState(FlasherStates::kIdle);
             break;
@@ -702,7 +710,7 @@ bool Flasher::CollectSecurityDataFromBoard() {
     }
 
     if (!success) {
-        qInfo() << "Security data error";
+        qInfo() << "No security data from bootloader";
     }
 
     return success;

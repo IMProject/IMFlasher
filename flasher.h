@@ -288,8 +288,8 @@ class Flasher : public QObject {
     QJsonObject board_info_;                                                //!< Board information
     QJsonObject client_security_data_;                                      //!< Security data client
     QJsonObject server_security_data_;                                      //!< Security data server
-    QJsonObject bl_version_;                                                //!< Bootloader version
-    QJsonObject fw_version_;                                                //!< Firmware version
+    QJsonObject bl_sw_info;                                                 //!< Bootloader software info
+    QJsonObject fw_sw_info;                                                 //!< Firmware software info
     QJsonArray product_info_;                                               //!< Product information
     QString selected_file_version_;                                         //!< Selected file version
     QString file_source_;                                                   //!< File source (URL or Server)
@@ -305,6 +305,8 @@ class Flasher : public QObject {
     bool is_file_downloaded_{false};                                        //!< Is file downloaded flag
     bool is_download_success_{false};                                       //!< Is download successfully done
     bool is_signature_warning_enabled_{false};                              //!< Is signature warning enabled
+    bool is_secure_communication_{false};                                   //!< Is communication with the server secure
+    bool is_secure_bootloader_{false};                                      //!< Is secure bootloader variant
     QByteArray file_content_;                                               //!< File content
     communication::SerialPort serial_port_;                                 //!< Serial port object
     std::shared_ptr<socket::SocketClient> socket_client_;                   //!< Shared pointer to SocketClient object

@@ -75,19 +75,21 @@ class SocketClient : public QTcpSocket {
     /*!
      * \brief Sending information about board to the server
      * \param board_info - Json object with board info for server
-     * \param bl_version - Json object with bootloader git version
-     * \param fw_version - Json object with firmware git version
+     * \param bl_sw_info - Json object with bootloader software info about version, variant, etc
+     * \param fq_sw_info - Json object with firmware software info about version, variant, etc
      * \return True if board info is successfully send, false otherwise
      */
-    virtual bool SendBoardInfo(QJsonObject board_info, QJsonObject bl_version, QJsonObject fw_version);
+    virtual bool SendBoardInfo(QJsonObject board_info, QJsonObject bl_sw_info, QJsonObject fw_sw_info);
 
     /*!
      * \brief Receive product info for given board info from the server
      * \param board_info - Json object with board info from server
+     * \param bl_sw_info - Json object with bootloader software info about version, variant, etc
      * \param product_info - Json array with product info from server
+     * \param is_secure_communication - Flag indicating if the server uses secure communication
      * \return
      */
-    virtual bool ReceiveProductInfo(QJsonObject board_info, QJsonArray& product_info);
+    virtual bool ReceiveProductInfo(QJsonObject board_info, QJsonObject bl_sw_info, QJsonArray& product_info, bool& is_secure_communication);
 
     /*!
      * \brief Download file from the server

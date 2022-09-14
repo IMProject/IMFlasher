@@ -173,13 +173,13 @@ void TestSocket::TestSendBoardInfo() {
     QVERIFY2(rx_json_board_info.value("product_type") == product_type, "Sending product type failed");
 
     QJsonObject rx_json_bl_version;
-    rx_json_bl_version = packet_object.value("bl_version").toObject();
+    rx_json_bl_version = packet_object.value("bl_sw_info").toObject();
     QVERIFY2(rx_json_bl_version.value("git_branch") == bl_git_branch, "Sending bl version failed");
     QVERIFY2(rx_json_bl_version.value("git_hash") == bl_git_hash, "Sending bl version failed");
     QVERIFY2(rx_json_bl_version.value("git_tag") == bl_git_tag, "Sending bl version failed");
 
     QJsonObject rx_json_fw_version;
-    rx_json_fw_version = packet_object.value("fw_version").toObject();
+    rx_json_fw_version = packet_object.value("fw_sw_info").toObject();
     QVERIFY2(rx_json_fw_version.value("git_branch") == fw_git_branch, "Sending fw version failed");
     QVERIFY2(rx_json_fw_version.value("git_hash") == fw_git_hash, "Sending fw version failed");
     QVERIFY2(rx_json_fw_version.value("git_tag") == fw_git_tag, "Sending fw version failed");
@@ -227,7 +227,9 @@ void TestSocket::TestReceiveProductType() {
     socket.read_data_.emplace_back(json_data.toJson());
 
     QJsonArray rx_product_info;
-    bool success = socket.ReceiveProductInfo(tx_json_board_info, rx_product_info);
+    bool is_secure_communication;
+    QJsonObject bl_sw_info;
+    bool success = socket.ReceiveProductInfo(tx_json_board_info, bl_sw_info, rx_product_info, is_secure_communication);
     QVERIFY2(success, "Receive product info failed");
 
     json_data = QJsonDocument::fromJson(socket.send_data_.at(1));
@@ -306,6 +308,8 @@ void TestSocket::TestSendFail() {
 
     QJsonArray rx_product_info;
 
-    bool success = socket.ReceiveProductInfo(tx_json_board_info, rx_product_info);
+    bool is_secure_communication;
+    QJsonObject bl_sw_info;
+    bool success = socket.ReceiveProductInfo(tx_json_board_info, bl_sw_info, rx_product_info, is_secure_communication);
     QVERIFY2(!success, "Send data did not fail");
 }
