@@ -299,20 +299,24 @@ void Flasher::LoopHandler() {
 
                     if (socket_client_->DownloadFile(board_info_, client_security_data_, selected_file_version_, server_security_data_, file_content_)) {
                         if (file_content_.isEmpty()) {
-                            emit ShowStatusMsg("Download error");
+                            emit ClearProgress();
+                            emit ShowStatusMsg("Download file error");
                             SetState(FlasherStates::kIdle);
                         } else {
-
-                            packet_size_ = kSecurePacketSize;
-                            emit ShowTextInBrowser("Secure connection detected!");
 
                             if (client_security_data_.empty() || server_security_data_.empty()) {
                                 SetState(FlasherStates::kCheckSignature);
                             } else {
+                                packet_size_ = kSecurePacketSize;
                                 SetState(FlasherStates::kSendServerSecurityData);
+                                emit ShowTextInBrowser("Secure connection detected!");
                             }
                         }
+
                     } else {
+                        emit ClearProgress();
+                        emit ShowStatusMsg("Download server error");
+
                         SetState(FlasherStates::kIdle);
                     }
 
