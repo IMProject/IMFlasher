@@ -45,8 +45,12 @@ namespace socket {
 
 namespace {
 
-constexpr int kMaxNoDataRetry {150};     //!< Max number of retries with no data
-constexpr int kMaxNoDataPeriod {1};    //!< Max time in [ms] while waiting
+#ifdef Q_OS_WIN
+constexpr int kMaxNoDataRetry {10};     //!< Max number of retries with no data
+#else
+constexpr int kMaxNoDataRetry {150};    //!< Max number of retries with no data
+#endif
+constexpr int kMaxNoDataPeriod {1};     //!< Max time in [ms] while waiting
 constexpr qint64 kSocketTimeout {2000};
 
 } // namespace
